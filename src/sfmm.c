@@ -40,14 +40,14 @@ void *sf_malloc(size_t size) {
         startPtr->header = (0x20 | 0x8); //to get to the blocksize of the header and allocate block size to 32 and allocated bit to 1
 
         //gotta go to next block to access the footer
-        sf_block* nextPtr = (sf_block*)((void*)(startPtr + 32)); // this will help us jump to next blocks start aka first blocks pointer
-        nextPtr->prev_footer = (0x20 | 0x8); //this will set the block size the same as headers
+        sf_block* nextPtr = (sf_block *)((void *)startPtr + 32); // this will help us jump to next blocks start aka first blocks pointer
+        nextPtr->prev_footer = startPtr->header; //this will set the block size the same as headers
        
         //just look at the block size at the header in order to tell if the block is big enoguh to allocate anything 
         nextPtr->header = (0xFD0);
 
-        sf_block* endPtr = (sf_block*)((void*)(sf_mem_end() - 16); //this will get to the prevFooter of the epilogue
-        endPtr->prevFooter = nextPtr->header
+        sf_block* endPtr = (sf_block *)((void *)sf_mem_end() - 16); //this will get to the prevFooter of the epilogue
+        endPtr->prev_footer = nextPtr->header;
 
         endPtr->header = 0x8;
 
@@ -60,7 +60,7 @@ void *sf_malloc(size_t size) {
         //whole thing 4096
         
         //epilogue has 8 byte header 
-        
+    
         
         //now the heap has the memoryy but we need to initialize it
         //heap needs blocks of memory to populate it
