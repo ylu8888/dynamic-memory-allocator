@@ -24,8 +24,38 @@ void *sf_malloc(size_t size) {
     //EVERY THING in between epilogue and prologue those 4800 bytes you have to make into another block
     // that will be your first free block, you put a header for that too and a footer for that
 
-    //initially memstart 
+    //if the heap is empty !
     if(sf_mem_start() == sf_mem_end()){
+
+    //initialize the sf_free_lists first 
+
+    //Array called sf_free_list_heads, which is an array of sf blocks with a size of num_free_lists = 10
+    //each element of the array is a sentinel which represents a circular doubly linked list
+    //sentinel is a dummy block, which the sentinels next block points to the first elem of array, and prev block points to the end of the circular list
+
+    //iterate through sf free list heads,i < num_free_lists  for each sf_head(i) set its next block it self and set its prev block to itself
+    //going thru the list and wanting to insert somewhere, if the list is empty, if .next points back to the sentinel it means its empty
+        
+        for(int i = 0; i < NUM_FREE_LISTS; i++){
+            sf_free_list_heads[i].body.links.next = &sf_free_list_heads[i]; //ampsersand to point it to the memory address not the element
+            sf_free_list_heads[i].body.links.prev = &sf_free_list_heads[i]; // this initializes the sentienl and makes the circula doubly linklist behavior correct
+
+            //FIBONACCI SEQUENCE 
+            //fib seq represents the free list heads, they represent size classes
+            //first one represents M = 32
+            // index 0 = blocks of size M only aka size 32
+            // index 1 = minimum of 48, maximum is 64 (both inclusive)
+            //at block 8 = minimum of 48M inclusive, upper bound is infinity exlusive)
+            //at block 9 = wilderness block , if we want to allocate and we dont find it anywhere, we put it in wilderness
+            //otherwise, if we dont find it in wilderness we call mem_grow again getting another 4096 bytes
+            //free lists is all the free blocks
+
+            //go into sf free list heads, insert the free block after the sentinel at index 9
+
+            
+        }
+
+        
         //initialize the empty heap
         //grow the heap
         
@@ -33,7 +63,7 @@ void *sf_malloc(size_t size) {
 
         //sf_block* realStart = startPtr; //ptr + 8 to skip that and leave it
 
-         //begin on the next part 
+        //begin on the next part 
         //prologue min size of 32 which is allocated 
         //only has padding no payload
         //put the allocated bit to 1 
@@ -48,20 +78,24 @@ void *sf_malloc(size_t size) {
 
         sf_block* endPtr = (sf_block *)((void *)sf_mem_end() - 16); //this will get to the prevFooter of the epilogue
         endPtr->prev_footer = nextPtr->header;
-
+        
+        //epilogue has 8 byte header 
         endPtr->header = 0x8;
 
         sf_show_heap();
 
+        sf_free_lists_heads[9].body.links.next = nextPtr->header;
+        sf_free_lists_heads[9].body.links.prev = nextPtr->header;
+        nextPtr->body.links.next = &sf_free_lists_heads[9];
+        nextPtr->body.links.prev = &sf_free_lists_heads[9];
+    
         //unused 8
         //prologue 32
-        // actualy memory 4048
-        // epilogue 8
+        //actualy memory 4048
+        //epilogue 8
         //whole thing 4096
         
-        //epilogue has 8 byte header 
     
-        
         //now the heap has the memoryy but we need to initialize it
         //heap needs blocks of memory to populate it
         //if alloc in block is allocated we set it to 1
@@ -76,17 +110,56 @@ void *sf_malloc(size_t size) {
        
         //if it doesnt meet the double word alignment, for ex: malloc(40) we need to add padding of 8 bytes to make it multiple of 48
 
-
         //how to use the structs
         //block is actually just from the previous footer to the end of payload
         //to get the footer of a block, you need to get the next blocks prevFooter
-
-        //skip the first 8 bytes to get alignment 
-        //call memstart
         
     }
-   
+
+    //if the heap is not empty 
+    //use the sf free block list, each of them represents a size class for example M, (M, 2M) following fibonacci
+    //if we want to malloc(70), we go through this and see which size class the 70 falls in, and each M is 32
+    //first thing we want to do is find the smallest size class for the 70, in this case is the 3rd one
+    //now iterate thru freelists[2] aka the third one, which has the range we're looking for
+    //look for blocks that might fit our 70, use next ptr to iterate for free blocks
+    //use header which has block size
+    //for every block within appropriate size class, get the header, use bit manipulation to get the block size, at bit 28
+    //if this block size greater than or equal to the 70,
+    //if it is then the block is appropriate
+    //if go through the whole list and dont find it then jump to the next size class and look again iterateing thru the doubly link list
     
+    //if the block is appropriate, do two checks
+    //say we want to allocate 40 bytes malloc(40) but the only block we have is 4048 bytes
+    //40 is not multiple of 48, so we allocate 48, so now we only have 4000 bytes left 
+    //now if you find a block size that fits the 40 size, go and remove the block from free list heads
+    //we want to actually allocate and use that block, so remove it from the link list
+    //take this remaining block 4000 and go into free list heads and insert it in the appropriate size class
+    //this whole operation is called splitting a block
+
+    //follow the fibonacci sequence on our own,
+    //there will not be any M blocks in the doubly link lists
+    //we will fill it up on our own gradually as we malloc
+    //go ahead and insert 4000 into index[8] for example
+
+    //regarding the free block, we are splitting the free block into two blocks when we malloc (40)
+    //insert a footer that has block size 48 and change the header of free block to 48
+    //then add a header of size 4000 below the blocksize40 footer and change the bottom footer to 4000 
+
+    //all the free block should be in free list heads
+    //now the free block turned into an allocated block and a new free block
+    //had 4048 in wilderness, malloc(48), then get rid of 4048
+    //set the allocated bits , if allocated then its 1, change its size to 48 for header and footer
+    //set the bottom footer which was 4048 and update it to 4000, no need to allocate bit because its defaulted on 0
+
+    //take the new block, which is the 4000 one, look where u need to insert it on the freelists, based on the fibonacci
+    //it just needs to be in the right size class, the right sentinel with the (M, xM)
+    //keep a fibonacci counter that keeps track of where u are (im at M, im on 3M, 5M)
+    //based on that counter, we could see which index has the appropriate range
+    //up until (34M, infinity)
+
+    //calling memgrow does coalescing => get another 4048 basically combines two blocks
+    
+
     abort();
 }
 
