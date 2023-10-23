@@ -9,7 +9,7 @@
 #include "sfmm.h"
 
 void *sf_malloc(size_t size) {
-    if (size == 0) {
+    if (size <= 0) {
         return NULL;
     }
     //if allocation not successful
@@ -116,6 +116,17 @@ void *sf_malloc(size_t size) {
         
     }
 
+    //finding the right size to malloc based on if its a multiple of 16
+    
+    if(size < 32) {
+        size = 32;
+    }
+    else{
+        if(size % 16 != 0){
+        size = ((size / 16) + 1) * 16;
+        }
+    }
+
     //if the heap is not empty 
     //use the sf free block list, each of them represents a size class for example M, (M, 2M) following fibonacci
     //if we want to malloc(70), we go through this and see which size class the 70 falls in, and each M is 32
@@ -135,6 +146,12 @@ void *sf_malloc(size_t size) {
     //we want to actually allocate and use that block, so remove it from the link list
     //take this remaining block 4000 and go into free list heads and insert it in the appropriate size class
     //this whole operation is called splitting a block
+
+    //splintering 
+    //say malloc(25) you would round it up to be 32, if you try to split it 
+    //if 48 is the only space available in block, and want to malloc (32)
+    //when you split it, you''ll be left with 16 bytes, which is less than minimum 32 bytes
+    //
 
     //follow the fibonacci sequence on our own,
     //there will not be any M blocks in the doubly link lists
