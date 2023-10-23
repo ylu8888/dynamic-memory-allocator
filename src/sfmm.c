@@ -182,11 +182,25 @@ void *sf_malloc(size_t size) {
 
     sf_block* block = sentinel->body.links.next;  //set the block pointer to the next one in sentinel
 
+    sf_block* removedBlock = block;
+
     while(block != sentinel){
         size_t blockSize = block->header;
         blockSize >>= 4;
         blockSize = blockSize & ((1 << 28) - 1); //find the block size using bit manipulation
 
+        if(blockSize >= size){ //if we find the block size thats greater than or equal to size
+            removedBlock = block;//just to keep track of which block we're removing
+            //now we need to remove this block
+            block = block->body.links.prev;
+
+            block->body.links.next; = block->body.links.next.next;
+
+            break;
+            
+        } else{ //if we cant find the block size in this linked list then we jump a level
+            
+        }
         
         block = block->body.links.next; //iterate through the free list moving block ptr
     }
