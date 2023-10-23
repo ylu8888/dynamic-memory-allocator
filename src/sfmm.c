@@ -38,7 +38,7 @@ void *sf_malloc(size_t size) {
         
         for(int i = 0; i < NUM_FREE_LISTS; i++){
             sf_free_list_heads[i].body.links.next = &sf_free_list_heads[i]; //ampsersand to point it to the memory address not the element
-            sf_free_list_heads[i].body.links.prev = &sf_free_list_heads[i]; // this initializes the sentienl and makes the circula doubly linklist behavior correct
+            sf_free_list_heads[i].body.links.prev = &sf_free_list_heads[i]; // this initializes the sentinel and makes the circula doubly linklist behavior correct
 
             //FIBONACCI SEQUENCE 
             //fib seq represents the free list heads, they represent size classes
@@ -52,10 +52,8 @@ void *sf_malloc(size_t size) {
 
             //go into sf free list heads, insert the free block after the sentinel at index 9
 
-            
         }
 
-        
         //initialize the empty heap
         //grow the heap
         
@@ -87,7 +85,7 @@ void *sf_malloc(size_t size) {
         sf_free_lists_heads[9].body.links.next = nextPtr->header;
         sf_free_lists_heads[9].body.links.prev = nextPtr->header;
         nextPtr->body.links.next = &sf_free_lists_heads[9];
-        nextPtr->body.links.prev = &sf_free_lists_heads[9];
+        nextPtr->body.links.prev = &sf_free_lists_heads[9]; //adding the free block into the array
     
         //unused 8
         //prologue 32
@@ -127,17 +125,73 @@ void *sf_malloc(size_t size) {
         }
     }
 
+//M    [0]
+    //1, 2 [1]
+    //2, 3 [2]
+    //3, 5 [3]
+    //5, 8  [4]
+    //8, 13 [5]
+    //13, 21 [6]
+    //21, 34 [7]
+    //34, inifnity [8] 9th
+    //wildnerneses block
+
     //if the heap is not empty 
     //use the sf free block list, each of them represents a size class for example M, (M, 2M) following fibonacci
     //if we want to malloc(70), we go through this and see which size class the 70 falls in, and each M is 32
-    //first thing we want to do is find the smallest size class for the 70, in this case is the 3rd one
-    //now iterate thru freelists[2] aka the third one, which has the range we're looking for
+    //first thing we want to do is find the smallest size class for the 70, in this case is the 2nd one
+    //now iterate thru freelists[1] aka the second one, which has the range we're looking for
     //look for blocks that might fit our 70, use next ptr to iterate for free blocks
     //use header which has block size
     //for every block within appropriate size class, get the header, use bit manipulation to get the block size, at bit 28
     //if this block size greater than or equal to the 70,
     //if it is then the block is appropriate
     //if go through the whole list and dont find it then jump to the next size class and look again iterateing thru the doubly link list
+    size_t M = 32;
+    size_t listPtr = 0;
+    
+    if(size == M){
+        listPtr = 0;
+    }
+    else if(M < size && size <= 2 * M){
+        listPtr = 1;
+    }    
+    else if(2 * M < size && size <= 3 * M){
+        listPtr = 2;
+    }
+    else if(3 * M < size && size <= 5 * M){
+        listPtr = 3;
+    }
+    else if(5 * M < size && size <= 8 * M){
+        listPtr = 4;
+    }    
+    else if(8 * M < size && size <= 13 * M){
+        listPtr = 5;
+    }
+    else if(13 * M < size && size <= 21 * M){
+        listPtr = 6;
+    }
+    else if(21 * M < size && size <= 34 * M){
+        listPtr = 7;
+    }
+    else if(size > 34 * M){
+        listPtr = 8; //9th index aka the one before wilderness
+    }
+
+    sf_block* sentinel = &sf_free_list_heads[listPtr]; //find the start of sentinel aka the free list index from listPtr
+
+    sf_block* block = sentinel->body.links.next;  //set the block pointer to the next one in sentinel
+
+    while(block != sentinel){
+        size_t blockSize = block->header;
+        blockSize >>= 4;
+        blockSize = blockSize & ((1 << 28) - 1); //find the block size using bit manipulation
+
+        
+        block = block->body.links.next; //iterate through the free list moving block ptr
+    }
+    
+   //if cant find it any of the doubly link list then we put it into wilderness
     
     //if the block is appropriate, do two checks
     //say we want to allocate 40 bytes malloc(40) but the only block we have is 4048 bytes
