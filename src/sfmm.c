@@ -39,7 +39,7 @@ void *sf_malloc(size_t size) {
         for(int i = 0; i < NUM_FREE_LISTS; i++){
             sf_free_list_heads[i].body.links.next = &sf_free_list_heads[i]; //ampsersand to point it to the memory address not the element
             sf_free_list_heads[i].body.links.prev = &sf_free_list_heads[i]; // this initializes the sentinel and makes the circula doubly linklist behavior correct
-
+            
             //FIBONACCI SEQUENCE 
             //fib seq represents the free list heads, they represent size classes
             //first one represents M = 32
@@ -114,17 +114,6 @@ void *sf_malloc(size_t size) {
         
     }
 
-    //finding the right size to malloc based on if its a multiple of 16
-    
-    if(size < 32) {
-        size = 32;
-    }
-    else{
-        if(size % 16 != 0){
-        size = ((size / 16) + 1) * 16;
-        }
-    }
-
 //M    [0]
     //1, 2 [1]
     //2, 3 [2]
@@ -147,6 +136,18 @@ void *sf_malloc(size_t size) {
     //if this block size greater than or equal to the 70,
     //if it is then the block is appropriate
     //if go through the whole list and dont find it then jump to the next size class and look again iterateing thru the doubly link list
+
+    
+    //finding the right size to malloc based on if its a multiple of 16
+    if(size < 32) {
+        size = 32;
+    }
+    else{
+        if(size % 16 != 0){
+        size = ((size / 16) + 1) * 16;
+        }
+    }
+    
     size_t M = 32;
     size_t listPtr = 0;
     
@@ -182,38 +183,81 @@ void *sf_malloc(size_t size) {
 
     sf_block* block = sentinel->body.links.next;  //set the block pointer to the next one in sentinel
 
-    sf_block* removedBlock = block;
+    sf_block* removedBlock = NULL;
 
     while(block != sentinel){
         size_t blockSize = block->header;
         blockSize >>= 4;
         blockSize = blockSize & ((1 << 28) - 1); //find the block size using bit manipulation
-
+    
         if(blockSize >= size){ //if we find the block size thats greater than or equal to size
-            removedBlock = block;//just to keep track of which block we're removing
             //now we need to remove this block
+            removedBlock = block;//just to keep track of which block we're removing
+            
             block = block->body.links.prev;
 
             block->body.links.next; = block->body.links.next.next;
 
-            break;
+            block = block->body.links.next;
+            block->body.links.prev = block->body.links.prev.prev;
+
+            removedBlock->body.links.prev = NULL; //set the blocks next and prev to null
+            removedBlock->body.links.next = NULL;
+
+            //now we need to check for splinter OR split
+            if((blockSize - size) < 32){
+                //splinter
+                
+            } else{ //SPLITTING A BLOCK
+                //regarding the free block, we are splitting the free block into two blocks when we malloc (40)
+                //insert a footer that has block size 48 and change the header of free block to 48
+                //then add a header of size 4000 below the blocksize 40 footer and change the bottom footer to 4000 
             
-        } else{ //if we cant find the block size in this linked list then we jump a level
+                //all the free block should be in free list heads
+                //now the free block turned into an allocated block and a new free block
+                //had 4048 in wilderness, malloc(48), then get rid of 4048
+                //set the allocated bits , if allocated then its 1, change its size to 48 for header and footer
+                //set the bottom footer which was 4048 and update it to 4000, no need to allocate bit because its defaulted on 0
             
-        }
+                //take the new block, which is the 4000 one, look where u need to insert it on the freelists, based on the fibonacci
+                //it just needs to be in the right size class, the right sentinel with the (M, xM)
+                //keep a fibonacci counter that keeps track of where u are (im at M, im on 3M, 5M)
+                //based on that counter, we could see which index has the appropriate range
+                //up until (34M, infinity)
+
+                //take the free block we have aka the 40 block
+                //check if epilogue if end_header = 0;
+                //to check if its epilogue check its block size == 0
+                //if it is epilogue then put it in the wilderness then we are at the end of the heap
+
+                removedBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+
+                if(removedBlock->header == 0){ //this means we are at epilogue
+                    //once u get to next block, to get to the end block 
+                    //next block plus the blocksize - inputsize
+                }
+
+            }
+            
+            
+
+            break; //we can break out because we found the proper blocksize
+            
+        } 
         
         block = block->body.links.next; //iterate through the free list moving block ptr
+        
+        if(block == sentinel){ //this means we have reached the end of the circular link list and restarted at sentinel
+            listPtr++;
+            if(listPtr
+            sentinel = &sf_free_list_heads[listPtr];
+            block = sentinel->body.links.next;  
+        }
     }
     
    //if cant find it any of the doubly link list then we put it into wilderness
+
     
-    //if the block is appropriate, do two checks
-    //say we want to allocate 40 bytes malloc(40) but the only block we have is 4048 bytes
-    //40 is not multiple of 48, so we allocate 48, so now we only have 4000 bytes left 
-    //now if you find a block size that fits the 40 size, go and remove the block from free list heads
-    //we want to actually allocate and use that block, so remove it from the link list
-    //take this remaining block 4000 and go into free list heads and insert it in the appropriate size class
-    //this whole operation is called splitting a block
 
     //splintering 
     //say malloc(25) you would round it up to be 32, if you try to split it 
@@ -226,21 +270,7 @@ void *sf_malloc(size_t size) {
     //we will fill it up on our own gradually as we malloc
     //go ahead and insert 4000 into index[8] for example
 
-    //regarding the free block, we are splitting the free block into two blocks when we malloc (40)
-    //insert a footer that has block size 48 and change the header of free block to 48
-    //then add a header of size 4000 below the blocksize40 footer and change the bottom footer to 4000 
-
-    //all the free block should be in free list heads
-    //now the free block turned into an allocated block and a new free block
-    //had 4048 in wilderness, malloc(48), then get rid of 4048
-    //set the allocated bits , if allocated then its 1, change its size to 48 for header and footer
-    //set the bottom footer which was 4048 and update it to 4000, no need to allocate bit because its defaulted on 0
-
-    //take the new block, which is the 4000 one, look where u need to insert it on the freelists, based on the fibonacci
-    //it just needs to be in the right size class, the right sentinel with the (M, xM)
-    //keep a fibonacci counter that keeps track of where u are (im at M, im on 3M, 5M)
-    //based on that counter, we could see which index has the appropriate range
-    //up until (34M, infinity)
+    
 
     //calling memgrow does coalescing => get another 4048 basically combines two blocks
     
