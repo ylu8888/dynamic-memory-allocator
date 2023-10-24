@@ -230,7 +230,25 @@ void *sf_malloc(size_t size) {
                 //to check if its epilogue check its block size == 0
                 //if it is epilogue then put it in the wilderness then we are at the end of the heap
 
+                //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
+                sf_block* endBlock = (sf_block *)((void *) removeBlock + blockSize - 8;//move endPtr to the end of the block
+                
                 removedBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+
+                //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
+                sf_block* nextBlock = (sf_block *)((void *)removedBlock + size - 8); //now we are at the next block, -8 to account for 
+
+                nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
+                
+                nextBlock->header = (blockSize - size); //set the header of the next block //unallocated
+
+                endBlock->prev_footer = (blockSize - size); //set the footer of the next block
+
+                
+
+                
+                    //check epilogues header if blcok size = 0
+                    //if the epilogue is there, then add this new free block into the wilderness INSTEAD
 
                 if(removedBlock->header == 0){ //this means we are at epilogue
                     //once u get to next block, to get to the end block 
