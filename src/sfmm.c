@@ -114,7 +114,7 @@ void *sf_malloc(size_t size) {
         
     }
 
-//M    [0]
+    //M    [0]
     //1, 2 [1]
     //2, 3 [2]
     //3, 5 [3]
@@ -147,6 +147,11 @@ void *sf_malloc(size_t size) {
         size = ((size / 16) + 1) * 16;
         }
     }
+
+    //follow the fibonacci sequence on our own,
+    //there will not be any M blocks in the doubly link lists
+    //we will fill it up on our own gradually as we malloc
+    //go ahead and insert 4000 into index[8] for example
     
     size_t M = 32;
     size_t listPtr = 0;
@@ -206,8 +211,11 @@ void *sf_malloc(size_t size) {
 
             //now we need to check for splinter OR split
             if((blockSize - size) < 32){
-                //splinter
-                
+                //splintering 
+                //say malloc(25) you would round it up to be 32, if you try to split it 
+                //if 48 is the only space available in block, and want to malloc (32)
+                //when you split it, you''ll be left with 16 bytes, which is less than minimum 32 bytes
+          
             } else{ //SPLITTING A BLOCK
                 //regarding the free block, we are splitting the free block into two blocks when we malloc (40)
                 //insert a footer that has block size 48 and change the header of free block to 48
@@ -244,24 +252,71 @@ void *sf_malloc(size_t size) {
 
                 endBlock->prev_footer = (blockSize - size); //set the footer of the next block
 
-                
+                size_t epiCheck = endBlock->header;
+                epiCheck >>= 4;
+                epiCheck = epiCheck & ((1 << 28) - 1); //find the block size using bit manipulation
 
-                
-                    //check epilogues header if blcok size = 0
-                    //if the epilogue is there, then add this new free block into the wilderness INSTEAD
+                //check epilogues header if block size = 0
+                //if the epilogue is there, then add this new free block into the wilderness INSTEAD
 
-                if(removedBlock->header == 0){ //this means we are at epilogue
-                    //once u get to next block, to get to the end block 
-                    //next block plus the blocksize - inputsize
+                if(epiCheck == 0){//this means this is the epilogue so
+                    //put it into wilderness, which either only has 1 block or none
+                    sf_free_lists_heads[9].body.links.next = nextBlock; //not header just the nextblock
+                    sf_free_lists_heads[9].body.links.prev = nextBlock;
+                    nextBlock->body.links.next = &sf_free_lists_heads[9];
+                    nextBlock->body.links.prev = &sf_free_lists_heads[9];
+                    
                 }
+                else{  //put it into the sentinels array respectively
+                    size_t newSize = blockSize - size; //48 - 32 = 16
+                     
+                    if(newSize == M){
+                        listPtr = 0;
+                    }
+                    else if(M < newSize && newSize <= 2 * M){
+                        listPtr = 1;
+                    }    
+                    else if(2 * M < newSize && newSize <= 3 * M){
+                        listPtr = 2;
+                    }
+                    else if(3 * M < newSize && newSize <= 5 * M){
+                        listPtr = 3;
+                    }
+                    else if(5 * M < newSize && newSize <= 8 * M){
+                        listPtr = 4;
+                    }    
+                    else if(8 * M < newSize && newSize <= 13 * M){
+                        listPtr = 5;
+                    }
+                    else if(13 * M < newSize && newSize <= 21 * M){
+                        listPtr = 6;
+                    }
+                    else if(21 * M < newSize && newSize <= 34 * M){
+                        listPtr = 7;
+                    }
+                    else if(newSize > 34 * M){
+                        listPtr = 8; //9th index aka the one before wilderness
+                    }
 
+                    //after finding the size class, iterate through that link list and add the newblock
+                    //if cant find it any of the doubly link list then we put it into wilderness
+                    
+                    //make a new node at the end of the circular linked list that connects every next and prev node
+                    //next block is the free block(16), 'new block' is the block at the end of link list, aka sentinel.prev
+                    sf_block* sentinel2 = &sf_free_list_heads[listPtr]; //move to the sentinel index
+                    sf_block* newBlock = sentinel2->body.links.prev; //go to the last index in circular link list aka sentinel.prev
+                    newBlock->body.links.next = nextBlock; //set the newBlocks next to nextblock
+                    nextBlock->body.links.next = sentinel2; //set the nextBlocks next to sentinel
+                    nextBlock->body.links.prev = newBlock; //set the nextBlcosk prev to newBlock
+                    sentinel2->body.links.prev = nextBlock; //set the sentinels prev to nextblock
+                                    
+                }
+                   
             }
             
-            
-
             break; //we can break out because we found the proper blocksize
             
-        } 
+        } //end of if(blockSize >= size)
         
         block = block->body.links.next; //iterate through the free list moving block ptr
         
@@ -271,25 +326,10 @@ void *sf_malloc(size_t size) {
             sentinel = &sf_free_list_heads[listPtr];
             block = sentinel->body.links.next;  
         }
-    }
-    
-   //if cant find it any of the doubly link list then we put it into wilderness
+        
+    } //end of while(block != sentinel)
 
     
-
-    //splintering 
-    //say malloc(25) you would round it up to be 32, if you try to split it 
-    //if 48 is the only space available in block, and want to malloc (32)
-    //when you split it, you''ll be left with 16 bytes, which is less than minimum 32 bytes
-    //
-
-    //follow the fibonacci sequence on our own,
-    //there will not be any M blocks in the doubly link lists
-    //we will fill it up on our own gradually as we malloc
-    //go ahead and insert 4000 into index[8] for example
-
-    
-
     //calling memgrow does coalescing => get another 4048 basically combines two blocks
     
 
