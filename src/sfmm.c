@@ -82,10 +82,10 @@ void *sf_malloc(size_t size) {
 
         sf_show_heap();
 
-        sf_free_lists_heads[9].body.links.next = nextPtr->header;
-        sf_free_lists_heads[9].body.links.prev = nextPtr->header;
-        nextPtr->body.links.next = &sf_free_lists_heads[9];
-        nextPtr->body.links.prev = &sf_free_lists_heads[9]; //adding the free block into the array
+        sf_free_list_heads[9].body.links.next = nextPtr->header;
+        sf_free_list_heads[9].body.links.prev = nextPtr->header;
+        nextPtr->body.links.next = &sf_free_list_heads[9];
+        nextPtr->body.links.prev = &sf_free_list_heads[9]; //adding the free block into the array
     
         //unused 8
         //prologue 32
@@ -201,7 +201,7 @@ void *sf_malloc(size_t size) {
             
             block = block->body.links.prev;
 
-            block->body.links.next; = block->body.links.next.next;
+            block->body.links.next = block->body.links.next.next;
 
             block = block->body.links.next;
             block->body.links.prev = block->body.links.prev.prev;
@@ -239,7 +239,7 @@ void *sf_malloc(size_t size) {
                 //if it is epilogue then put it in the wilderness then we are at the end of the heap
 
                 //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
-                sf_block* endBlock = (sf_block *)((void *) removeBlock + blockSize - 8;//move endPtr to the end of the block
+                sf_block* endBlock = (sf_block *)((void *) removedBlock + blockSize - 8);//move endPtr to the end of the block
                 
                 removedBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
 
@@ -261,10 +261,10 @@ void *sf_malloc(size_t size) {
 
                 if(epiCheck == 0){//this means this is the epilogue so
                     //put it into wilderness, which either only has 1 block or none
-                    sf_free_lists_heads[9].body.links.next = nextBlock; //not header just the nextblock
-                    sf_free_lists_heads[9].body.links.prev = nextBlock;
-                    nextBlock->body.links.next = &sf_free_lists_heads[9];
-                    nextBlock->body.links.prev = &sf_free_lists_heads[9];
+                    sf_free_list_heads[9].body.links.next = nextBlock; //not header just the nextblock
+                    sf_free_list_heads[9].body.links.prev = nextBlock;
+                    nextBlock->body.links.next = &sf_free_list_heads[9];
+                    nextBlock->body.links.prev = &sf_free_list_heads[9];
                     
                 }
                 else{  //put it into the sentinels array respectively
@@ -322,7 +322,7 @@ void *sf_malloc(size_t size) {
         
         if(block == sentinel){ //this means we have reached the end of the circular link list and restarted at sentinel
             listPtr++;
-            if(listPtr
+            if(listPtr == 9) break; //means we hit the  wilderness block
             sentinel = &sf_free_list_heads[listPtr];
             block = sentinel->body.links.next;  
         }
@@ -334,6 +334,7 @@ void *sf_malloc(size_t size) {
     
 
     abort();
+
 }
 
 void sf_free(void *pp) {
