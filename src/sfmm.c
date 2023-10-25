@@ -212,8 +212,13 @@ void *sf_malloc(size_t size) {
     while(block != sentinel){
        // printf("I am in the sentinel while loop\n");
         size_t blockSize = block->header;
-        blockSize >>= 4;
-        blockSize = blockSize & ((1 << 28) - 1); //find the block size using bit manipulation
+        // blockSize >>= 4;
+        // blockSize = blockSize & ((1 << 28) - 1); 
+
+        int mask = ((1 << (25)) - 1) << 4;
+        blockSize = (blockSize & mask); //find the block size using bit manipulation
+
+        printf("%zu\n", blockSize);
     
         if(blockSize >= size){ //if we find the block size thats greater than or equal to size
             //now we need to remove this block
@@ -275,8 +280,11 @@ void *sf_malloc(size_t size) {
                 endBlock->prev_footer = (blockSize - size); //set the footer of the next block
 
                 size_t epiCheck = endBlock->header;
-                epiCheck >>= 4;
-                epiCheck = epiCheck & ((1 << 28) - 1); //find the block size using bit manipulation
+
+                int mask = ((1 << (25)) - 1) << 4;
+                epiCheck = (epiCheck & mask);
+                // epiCheck >>= 4;
+                // epiCheck = epiCheck & ((1 << 28) - 1); //find the block size using bit manipulation
 
                 //check epilogues header if block size = 0
                 //if the epilogue is there, then add this new free block into the wilderness INSTEAD
@@ -349,6 +357,20 @@ void *sf_malloc(size_t size) {
 
     if(wildBool == 1){
         printf("IM A WILD BOOLOLO\n");
+
+        sf_block* wilderness = &sf_free_list_heads[9]; //points at wilderness sentinel
+        sf_block* wildBlock = wilderness->body.links.next; // points at the wildblock
+
+        wilderness->body.links.next = wilderness; //set wild sentinel to point at itself
+        wilderness->body.links.prev = wilderness;
+        
+        wildBlock->body.links.next = NULL; //set the wildblock next and prev to null
+        wildBlock->body.links.prev = NULL;
+        
+        size_t wildSize = wildBlock->header;
+        int mask = ((1 << 25) - 1) << 4;
+        wildSize = (wildSize & mask); //find the block size using bit manipulation
+        
 
     }
 
