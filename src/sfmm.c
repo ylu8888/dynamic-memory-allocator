@@ -244,7 +244,7 @@ void *sf_malloc(size_t size) {
                 //when you split it, you''ll be left with 16 bytes, which is less than minimum 32 bytes
 
                 //just set the allocated bit for the header and the footer of the removed block
-                removedBlock->header = (blockSize | 0x8);
+                removedBlock->header |= 0x8;
                 sf_block* splinterPtr = (sf_block *)((void *)removedBlock + blockSize); //removedBlock + the size of blocksize(48) to jump to next block
                 splinterPtr->prev_footer = removedBlock->header;
                 
@@ -383,9 +383,11 @@ void *sf_malloc(size_t size) {
         if((wildSize - size) < 32){
                 //splintering 
         
-                wildBlock->header = (wildSize | 0x8);
+                wildBlock->header |= 0x8;
                 sf_block* splinterCell = (sf_block *)((void *)wildBlock + wildSize);
                 splinterCell->prev_footer = wildBlock->header;
+                sf_show_heap();
+
           
             } else{ //SPLITTING A BLOCK 
                 //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
@@ -408,7 +410,7 @@ void *sf_malloc(size_t size) {
                 nextBlock->body.links.next = wildSentinel;
                 nextBlock->body.links.prev = wildSentinel;
 
-                sf_show_heap();
+               // sf_show_heap();
                 
             }
         
