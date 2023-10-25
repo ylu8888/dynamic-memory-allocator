@@ -80,12 +80,14 @@ void *sf_malloc(size_t size) {
         //epilogue has 8 byte header 
         endPtr->header = 0x8;
 
-        sf_show_heap();
-
+        
         sf_free_list_heads[9].body.links.next = nextPtr;
         sf_free_list_heads[9].body.links.prev = nextPtr;
         nextPtr->body.links.next = &sf_free_list_heads[9];
         nextPtr->body.links.prev = &sf_free_list_heads[9]; //adding the free block into the array
+
+        //sf_show_heap();
+
     
         //unused 8
         //prologue 32
@@ -154,7 +156,7 @@ void *sf_malloc(size_t size) {
     //go ahead and insert 4000 into index[8] for example
     
     size_t M = 32;
-    size_t listPtr = 0;
+    int listPtr = 0;
     
     if(size == M){
         listPtr = 0;
@@ -190,14 +192,17 @@ void *sf_malloc(size_t size) {
 
     sf_block* removedBlock = NULL;
 
-    size_t wildBool = 0; //boolean to see if we do wilderness or not lol
+    int wildBool = 0; //boolean to see if we do wilderness or not lol
 
     while(block == sentinel && listPtr != 9){ //we are trying to reach a proper sentinel OTHERwise we hit the WILDERNESS
+      //  printf("%d\n", listPtr);
         if(block == sentinel){ //this means we have reached the end of the circular link list and restarted at sentinel
             listPtr++;
             if(listPtr == 9){
             wildBool = 1;
-            break; //means we hit the  wilderness block
+            printf("I broke out and wildbool is now 9\n");
+           // printf("%d\n", wildBool);
+            break; //means we hit the wilderness block
             }
             sentinel = &sf_free_list_heads[listPtr];
             block = sentinel->body.links.next;  
@@ -205,6 +210,7 @@ void *sf_malloc(size_t size) {
     }
 
     while(block != sentinel){
+       // printf("I am in the sentinel while loop\n");
         size_t blockSize = block->header;
         blockSize >>= 4;
         blockSize = blockSize & ((1 << 28) - 1); //find the block size using bit manipulation
@@ -334,16 +340,18 @@ void *sf_malloc(size_t size) {
             
         } //end of if(blockSize >= size)
 
-        if(wildBool == 1){
-            printf("LOL I MADE IT HERE\n");
-        }
         
         block = block->body.links.next; //iterate through the free list moving block ptr
         
         
     } //end of while(block != sentinel)
 
-    
+
+    if(wildBool == 1){
+        printf("IM A WILD BOOLOLO\n");
+
+    }
+
     
     //calling memgrow does coalescing => get another 4048 basically combines two blocks
     
