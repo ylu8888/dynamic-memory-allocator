@@ -246,7 +246,7 @@ void *sf_malloc(size_t size) {
                 //just set the allocated bit for the header and the footer of the removed block
                 removedBlock->header = (blockSize | 0x8);
                 sf_block* splinterPtr = (sf_block *)((void *)removedBlock + blockSize); //removedBlock + the size of blocksize(48) to jump to next block
-                splinterPtr->prev_footer = removedblock->header;
+                splinterPtr->prev_footer = removedBlock->header;
                 
                 
             } else{ //SPLITTING A BLOCK
@@ -378,7 +378,7 @@ void *sf_malloc(size_t size) {
         size_t wildSize = wildBlock->header;
         int mask = ((1 << 25) - 1) << 4;
         wildSize = (wildSize & mask); //find the block size using bit manipulation
-        printf("%zu\n, wildSize);
+        printf("%zu\n", wildSize);
 
         if((wildSize - size) < 32){
                 //splintering 
@@ -389,7 +389,7 @@ void *sf_malloc(size_t size) {
           
             } else{ //SPLITTING A BLOCK 
                 //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
-                sf_block* endBlock = (sf_block *)((void *) wildBlock + blockSize);//move endPtr to the end of the block
+                sf_block* endBlock = (sf_block *)((void *) wildBlock + wildSize);//move endPtr to the end of the block
                 
                 wildBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
                 
@@ -398,15 +398,17 @@ void *sf_malloc(size_t size) {
 
                 nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
                 
-                nextBlock->header = (blockSize - size); //set the header of the next block //unallocated
+                nextBlock->header = (wildSize - size); //set the header of the next block //unallocated
 
-                endBlock->prev_footer = (blockSize - size); //set the footer of the next block
+                endBlock->prev_footer = (wildSize - size); //set the footer of the next block
 
                 sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
                 wildSentinel->body.links.next = nextBlock;
                 wildSentinel->body.links.prev = nextBlock;
                 nextBlock->body.links.next = wildSentinel;
                 nextBlock->body.links.prev = wildSentinel;
+
+                sf_show_heap();
                 
             }
         
