@@ -238,11 +238,17 @@ void *sf_malloc(size_t size) {
 
             //now we need to check for splinter OR split
             if((blockSize - size) < 32){
-                //splintering 
+                //SPLINTERING
                 //say malloc(25) you would round it up to be 32, if you try to split it 
                 //if 48 is the only space available in block, and want to malloc (32)
                 //when you split it, you''ll be left with 16 bytes, which is less than minimum 32 bytes
-          
+
+                //just set the allocated bit for the header and the footer of the removed block
+                removedBlock->header = (blockSize | 0x8);
+                sf_block* splinterPtr = (sf_block *)((void *)removedBlock + blockSize); //removedBlock + the size of blocksize(48) to jump to next block
+                splinterPtr->prev_footer = removedblock->header;
+                
+                
             } else{ //SPLITTING A BLOCK
                 //regarding the free block, we are splitting the free block into two blocks when we malloc (40)
                 //insert a footer that has block size 48 and change the header of free block to 48
@@ -374,11 +380,12 @@ void *sf_malloc(size_t size) {
         wildSize = (wildSize & mask); //find the block size using bit manipulation
         printf("%zu\n, wildSize);
 
-        if((blockSize - size) < 32){
+        if((wildSize - size) < 32){
                 //splintering 
-                //say malloc(25) you would round it up to be 32, if you try to split it 
-                //if 48 is the only space available in block, and want to malloc (32)
-                //when you split it, you''ll be left with 16 bytes, which is less than minimum 32 bytes
+        
+                wildBlock->header = (wildSize | 0x8);
+                sf_block* splinterCell = (sf_block *)((void *)wildBlock + wildSize);
+                splinterCell->prev_footer = wildBlock->header;
           
             } else{ //SPLITTING A BLOCK 
                 //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
@@ -400,18 +407,14 @@ void *sf_malloc(size_t size) {
                 wildSentinel->body.links.prev = nextBlock;
                 nextBlock->body.links.next = wildSentinel;
                 nextBlock->body.links.prev = wildSentinel;
-                    
-
+                
+            }
+        
+       }//end of if wildBool == 1
+         
         //set the footer for 4000 by getting the next block
         //check if next block is the epilogue, then you put it
-            }
-       }
-         
-        
        
-    }
-
-    
     //calling memgrow does coalescing => get another 4048 basically combines two blocks
     
 
