@@ -7,6 +7,7 @@
 #include <string.h>
 #include "debug.h"
 #include "sfmm.h"
+#include <errno.h>
 
 void *sf_malloc(size_t size) {
     if (size <= 0) {
@@ -195,7 +196,8 @@ void *sf_malloc(size_t size) {
 
     sf_block* removedBlock = NULL;
 
-    int wildBool = 0; //boolean to see if we do wilderness or not lol
+
+  int wildBool = 0; //boolean to see if we do wilderness or not lol
 
     while(block == sentinel && listPtr != 9){ //we are trying to reach a proper sentinel OTHERwise we hit the WILDERNESS
       //  printf("%d\n", listPtr);
@@ -401,7 +403,7 @@ void *sf_malloc(size_t size) {
                     wildBlock->header |= 0x8;
                     sf_block* splinterCell = (sf_block *)((void *)wildBlock + wildSize);
                     splinterCell->prev_footer = wildBlock->header;
-                    sf_show_heap();
+                    //sf_show_heap();
     
               
                 } else{ //SPLITTING A BLOCK 
@@ -425,7 +427,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
     
-                   // sf_show_heap();  
+                    //sf_show_heap();  
                 }//end of splitting block
 
         //end of else statement
@@ -442,13 +444,12 @@ void *sf_malloc(size_t size) {
             //if not enough space, mem_end will return null if you run out of space, if it does, set errNo = invalid
             //if theres space, do splinter or split and put the new block into lists 0-8 but if its epilogue put in wilderness
 
-            int newWildSize = wildSize;
+            size_t newWildSize = wildSize;
 
             while(newWildSize < size){
-                sf_mem_grow();
 
                 if(sf_mem_grow() == NULL){
-                    //sf_errno = ENOMEM;
+                    sf_errno = ENOMEM;
                     return NULL;
                 }
     
@@ -457,11 +458,14 @@ void *sf_malloc(size_t size) {
                 wildBlock->header = (newWildSize); //set the new size of the removed wild block
     
                 sf_block* endTimes= (sf_block*) sf_mem_end(); //4096 bytes added to the heap returns a pointer to the top
+                 //sf_show_heap();  
     
                 sf_block* wildEnd = (sf_block *)((void *)endTimes - 16); //now we are the end times 
     
                 wildEnd->prev_footer = (newWildSize); // set the prev footer equal to the 4048 + 4096
                 wildEnd->header |= (0x8); //set the epilogue allocated bit to 1
+
+
             }//end of newWildSize < size
 
             if((newWildSize - size) < 32){
@@ -470,7 +474,7 @@ void *sf_malloc(size_t size) {
                     wildBlock->header |= 0x8;
                     sf_block* splinterCell = (sf_block *)((void *)wildBlock + newWildSize);
                     splinterCell->prev_footer = wildBlock->header;
-                    sf_show_heap();
+                   // sf_show_heap();
     
               
                 } else{ //SPLITTING A BLOCK 
@@ -485,7 +489,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
                     
                     nextBlock->header = (newWildSize - size); //set the header of the next block //unallocated
-    
+
                     endBlock->prev_footer = (newWildSize - size); //set the footer of the next block
     
                     sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
@@ -494,7 +498,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
     
-                    sf_show_heap();  
+                   sf_show_heap();  
                 }//end of splitting block
 
         
