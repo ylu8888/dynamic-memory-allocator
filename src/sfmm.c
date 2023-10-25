@@ -12,7 +12,9 @@ void *sf_malloc(size_t size) {
     if (size <= 0) {
         return NULL;
     }
-    size_t ogSize = size; //keep track of original size for payload later
+    //size_t ogSize = size; //keep track of original size for payload later UNCOMMENT THIS LATER
+
+
     //if allocation not successful
     // sf_errno = ENOMEM;
     // return NULL;
@@ -425,9 +427,9 @@ void *sf_malloc(size_t size) {
     
                    // sf_show_heap();  
                 }//end of splitting block
-            
-            } //end of else statement
-            
+
+        //end of else statement
+
         }//end of if wildsize is valid
         else{ //if the wildize is not big enough
             //if the wilderness is NOT empty and not big enough, you call memgrow and get another 4096 bytes,
@@ -446,32 +448,66 @@ void *sf_malloc(size_t size) {
                 sf_mem_grow();
 
                 if(sf_mem_grow() == NULL){
-                    sf_errno = EINVAL;
+                    //sf_errno = ENOMEM;
                     return NULL;
                 }
     
                 newWildSize += 4096; //the new size say 4048 + 4096 lol
     
-                wildBlock->header = (newSize); //set the new size of the removed wild block
+                wildBlock->header = (newWildSize); //set the new size of the removed wild block
     
                 sf_block* endTimes= (sf_block*) sf_mem_end(); //4096 bytes added to the heap returns a pointer to the top
     
                 sf_block* wildEnd = (sf_block *)((void *)endTimes - 16); //now we are the end times 
     
-                wildEnd->prev_footer = wildBlock->header; // set the prev footer equal to the 4048 + 4096
+                wildEnd->prev_footer = (newWildSize); // set the prev footer equal to the 4048 + 4096
                 wildEnd->header |= (0x8); //set the epilogue allocated bit to 1
-            }
+            }//end of newWildSize < size
+
+            if((newWildSize - size) < 32){
+                    //splintering 
             
+                    wildBlock->header |= 0x8;
+                    sf_block* splinterCell = (sf_block *)((void *)wildBlock + newWildSize);
+                    splinterCell->prev_footer = wildBlock->header;
+                    sf_show_heap();
+    
+              
+                } else{ //SPLITTING A BLOCK 
+                    //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
+                    sf_block* endBlock = (sf_block *)((void *) wildBlock + newWildSize);//move endPtr to the end of the block
+                    
+                    wildBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+                    
+                    //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
+                    sf_block* nextBlock = (sf_block *)((void *)wildBlock + size); //now we are at the next block, -8 to account for 
+    
+                    nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
+                    
+                    nextBlock->header = (newWildSize - size); //set the header of the next block //unallocated
+    
+                    endBlock->prev_footer = (newWildSize - size); //set the footer of the next block
+    
+                    sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
+                    wildSentinel->body.links.next = nextBlock;
+                    wildSentinel->body.links.prev = nextBlock;
+                    nextBlock->body.links.next = wildSentinel;
+                    nextBlock->body.links.prev = wildSentinel;
+    
+                    sf_show_heap();  
+                }//end of splitting block
+
         
-       }//end of if wildBool == 1
+       }//end of else staement
          
         //set the footer for 4000 by getting the next block
         //check if next block is the epilogue, then you put it
        
     //calling memgrow does coalescing => get another 4048 basically combines two blocks
 
-
-    
+   }//end of 2nd else statement
+   
+ }//end of if wildbool == 1
 
     abort();
 
