@@ -82,8 +82,8 @@ void *sf_malloc(size_t size) {
 
         sf_show_heap();
 
-        sf_free_list_heads[9].body.links.next = nextPtr->header;
-        sf_free_list_heads[9].body.links.prev = nextPtr->header;
+        sf_free_list_heads[9].body.links.next = nextPtr;
+        sf_free_list_heads[9].body.links.prev = nextPtr;
         nextPtr->body.links.next = &sf_free_list_heads[9];
         nextPtr->body.links.prev = &sf_free_list_heads[9]; //adding the free block into the array
     
@@ -198,13 +198,15 @@ void *sf_malloc(size_t size) {
         if(blockSize >= size){ //if we find the block size thats greater than or equal to size
             //now we need to remove this block
             removedBlock = block;//just to keep track of which block we're removing
-            
-            block = block->body.links.prev;
 
-            block->body.links.next = block->body.links.next.next;
+            sf_block* prevBlock = block->body.links.prev; //temporarily store the prev and next blocks
+            sf_block* nextBloque = block->body.links.next;
 
-            block = block->body.links.next;
-            block->body.links.prev = block->body.links.prev.prev;
+            block = prevBlock;
+            block->body.links.next = nextBloque; //set the prevblock's next to blocks.next.next
+
+            block = nextBloque;
+            block->body.links.prev = prevBloque; //set the next blocks prev to blocks.prev.prev
 
             removedBlock->body.links.prev = NULL; //set the blocks next and prev to null
             removedBlock->body.links.next = NULL;
