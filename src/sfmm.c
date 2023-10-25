@@ -190,6 +190,20 @@ void *sf_malloc(size_t size) {
 
     sf_block* removedBlock = NULL;
 
+    size_t wildBool = 0; //boolean to see if we do wilderness or not lol
+
+    while(block == sentinel && listPtr != 9){ //we are trying to reach a proper sentinel OTHERwise we hit the WILDERNESS
+        if(block == sentinel){ //this means we have reached the end of the circular link list and restarted at sentinel
+            listPtr++;
+            if(listPtr == 9){
+            wildBool = 1;
+            break; //means we hit the  wilderness block
+            }
+            sentinel = &sf_free_list_heads[listPtr];
+            block = sentinel->body.links.next;  
+         }
+    }
+
     while(block != sentinel){
         size_t blockSize = block->header;
         blockSize >>= 4;
@@ -206,7 +220,7 @@ void *sf_malloc(size_t size) {
             block->body.links.next = nextBloque; //set the prevblock's next to blocks.next.next
 
             block = nextBloque;
-            block->body.links.prev = prevBloque; //set the next blocks prev to blocks.prev.prev
+            block->body.links.prev = prevBlock; //set the next blocks prev to blocks.prev.prev
 
             removedBlock->body.links.prev = NULL; //set the blocks next and prev to null
             removedBlock->body.links.next = NULL;
@@ -241,12 +255,12 @@ void *sf_malloc(size_t size) {
                 //if it is epilogue then put it in the wilderness then we are at the end of the heap
 
                 //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
-                sf_block* endBlock = (sf_block *)((void *) removedBlock + blockSize - 8);//move endPtr to the end of the block
+                sf_block* endBlock = (sf_block *)((void *) removedBlock + blockSize);//move endPtr to the end of the block
                 
                 removedBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
 
                 //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
-                sf_block* nextBlock = (sf_block *)((void *)removedBlock + size - 8); //now we are at the next block, -8 to account for 
+                sf_block* nextBlock = (sf_block *)((void *)removedBlock + size); //now we are at the next block, -8 to account for 
 
                 nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
                 
@@ -319,18 +333,17 @@ void *sf_malloc(size_t size) {
             break; //we can break out because we found the proper blocksize
             
         } //end of if(blockSize >= size)
+
+        if(wildBool == 1){
+            printf("LOL I MADE IT HERE\n");
+        }
         
         block = block->body.links.next; //iterate through the free list moving block ptr
         
-        if(block == sentinel){ //this means we have reached the end of the circular link list and restarted at sentinel
-            listPtr++;
-            if(listPtr == 9) break; //means we hit the  wilderness block
-            sentinel = &sf_free_list_heads[listPtr];
-            block = sentinel->body.links.next;  
-        }
         
     } //end of while(block != sentinel)
 
+    
     
     //calling memgrow does coalescing => get another 4048 basically combines two blocks
     
