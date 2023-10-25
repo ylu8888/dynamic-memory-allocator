@@ -218,7 +218,7 @@ void *sf_malloc(size_t size) {
         int mask = ((1 << (25)) - 1) << 4;
         blockSize = (blockSize & mask); //find the block size using bit manipulation
 
-        printf("%zu\n", blockSize);
+       // printf("%zu\n", blockSize);
     
         if(blockSize >= size){ //if we find the block size thats greater than or equal to size
             //now we need to remove this block
@@ -330,6 +330,8 @@ void *sf_malloc(size_t size) {
 
                     //after finding the size class, iterate through that link list and add the newblock
                     //if cant find it any of the doubly link list then we put it into wilderness
+
+                    //WE NEED TO CHANGE THIS!! DONT PUT IT AT THE END PUT IT AT THE FRONT
                     
                     //make a new node at the end of the circular linked list that connects every next and prev node
                     //next block is the free block(16), 'new block' is the block at the end of link list, aka sentinel.prev
@@ -370,8 +372,43 @@ void *sf_malloc(size_t size) {
         size_t wildSize = wildBlock->header;
         int mask = ((1 << 25) - 1) << 4;
         wildSize = (wildSize & mask); //find the block size using bit manipulation
-        
+        printf("%zu\n, wildSize);
 
+        if((blockSize - size) < 32){
+                //splintering 
+                //say malloc(25) you would round it up to be 32, if you try to split it 
+                //if 48 is the only space available in block, and want to malloc (32)
+                //when you split it, you''ll be left with 16 bytes, which is less than minimum 32 bytes
+          
+            } else{ //SPLITTING A BLOCK 
+                //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
+                sf_block* endBlock = (sf_block *)((void *) wildBlock + blockSize);//move endPtr to the end of the block
+                
+                wildBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+                
+                //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
+                sf_block* nextBlock = (sf_block *)((void *)wildBlock + size); //now we are at the next block, -8 to account for 
+
+                nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
+                
+                nextBlock->header = (blockSize - size); //set the header of the next block //unallocated
+
+                endBlock->prev_footer = (blockSize - size); //set the footer of the next block
+
+                sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
+                wildSentinel->body.links.next = nextBlock;
+                wildSentinel->body.links.prev = nextBlock;
+                nextBlock->body.links.next = wildSentinel;
+                nextBlock->body.links.prev = wildSentinel;
+                    
+
+        //set the footer for 4000 by getting the next block
+        //check if next block is the epilogue, then you put it
+            }
+       }
+         
+        
+       
     }
 
     
