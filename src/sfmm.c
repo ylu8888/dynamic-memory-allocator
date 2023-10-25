@@ -200,7 +200,7 @@ void *sf_malloc(size_t size) {
             listPtr++;
             if(listPtr == 9){
             wildBool = 1;
-            printf("I broke out and wildbool is now 9\n");
+            //printf("I broke out and wildbool is now 9\n");
            // printf("%d\n", wildBool);
             break; //means we hit the wilderness block
             }
@@ -364,7 +364,7 @@ void *sf_malloc(size_t size) {
 
 
     if(wildBool == 1){
-        printf("IM A WILD BOOLOLO\n");
+        //printf("IM A WILD BOOLOLO\n");
 
         sf_block* wilderness = &sf_free_list_heads[9]; //points at wilderness sentinel
         sf_block* wildBlock = wilderness->body.links.next; // points at the wildblock
@@ -378,7 +378,7 @@ void *sf_malloc(size_t size) {
         size_t wildSize = wildBlock->header;
         int mask = ((1 << 25) - 1) << 4;
         wildSize = (wildSize & mask); //find the block size using bit manipulation
-        printf("%zu\n", wildSize);
+        //printf("%zu\n", wildSize);
 
         if((wildSize - size) < 32){
                 //splintering 
