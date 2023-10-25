@@ -12,6 +12,7 @@ void *sf_malloc(size_t size) {
     if (size <= 0) {
         return NULL;
     }
+    size_t ogSize = size; //keep track of original size for payload later
     //if allocation not successful
     // sf_errno = ENOMEM;
     // return NULL;
@@ -369,50 +370,98 @@ void *sf_malloc(size_t size) {
         sf_block* wilderness = &sf_free_list_heads[9]; //points at wilderness sentinel
         sf_block* wildBlock = wilderness->body.links.next; // points at the wildblock
 
-        wilderness->body.links.next = wilderness; //set wild sentinel to point at itself
-        wilderness->body.links.prev = wilderness;
-        
-        wildBlock->body.links.next = NULL; //set the wildblock next and prev to null
-        wildBlock->body.links.prev = NULL;
-        
-        size_t wildSize = wildBlock->header;
-        int mask = ((1 << 25) - 1) << 4;
-        wildSize = (wildSize & mask); //find the block size using bit manipulation
-        //printf("%zu\n", wildSize);
+        if(wildBlock == wilderness){  //this means wilderness is empty
+            //COALESCING
+            //say you want to allocate some size, but we cant find it in lists 0-8 or the wilderness
+            //is the wilderness empty? if so, call memgrow then the previous epilogue becomes the header of the new block,
+            //set the new headers blocksize to 4096
+            //jump to mem end and set the footer, then set the header to the epilogue
+            //now check if the new size fits the input size, 
+        }
+        else{ //if wilderness is NOT empty
+            wilderness->body.links.next = wilderness; //set wild sentinel to point at itself
+            wilderness->body.links.prev = wilderness;
+            
+            wildBlock->body.links.next = NULL; //set the wildblock next and prev to null
+            wildBlock->body.links.prev = NULL;
+            
+            size_t wildSize = wildBlock->header;
+            int mask = ((1 << 25) - 1) << 4;
+            wildSize = (wildSize & mask); //find the block size using bit manipulation
+            //printf("%zu\n", wildSize);
 
-        if((wildSize - size) < 32){
-                //splintering 
-        
-                wildBlock->header |= 0x8;
-                sf_block* splinterCell = (sf_block *)((void *)wildBlock + wildSize);
-                splinterCell->prev_footer = wildBlock->header;
-                sf_show_heap();
+          //check if wilderness has the sufficient block size to store it, for example malloc(5000) doesnt work since 5000 > 4048
+            
+         if(wildSize >= size){ //if the size is VALID
+            if((wildSize - size) < 32){
+                    //splintering 
+            
+                    wildBlock->header |= 0x8;
+                    sf_block* splinterCell = (sf_block *)((void *)wildBlock + wildSize);
+                    splinterCell->prev_footer = wildBlock->header;
+                    sf_show_heap();
+    
+              
+                } else{ //SPLITTING A BLOCK 
+                    //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
+                    sf_block* endBlock = (sf_block *)((void *) wildBlock + wildSize);//move endPtr to the end of the block
+                    
+                    wildBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+                    
+                    //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
+                    sf_block* nextBlock = (sf_block *)((void *)wildBlock + size); //now we are at the next block, -8 to account for 
+    
+                    nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
+                    
+                    nextBlock->header = (wildSize - size); //set the header of the next block //unallocated
+    
+                    endBlock->prev_footer = (wildSize - size); //set the footer of the next block
+    
+                    sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
+                    wildSentinel->body.links.next = nextBlock;
+                    wildSentinel->body.links.prev = nextBlock;
+                    nextBlock->body.links.next = wildSentinel;
+                    nextBlock->body.links.prev = wildSentinel;
+    
+                   // sf_show_heap();  
+                }//end of splitting block
+            
+            } //end of else statement
+            
+        }//end of if wildsize is valid
+        else{ //if the wildize is not big enough
+            //if the wilderness is NOT empty and not big enough, you call memgrow and get another 4096 bytes,
+            //combine whatevers in wilderness 
+            //update header of wilderness, add the previous x + 4096.
+            //jump to the bottom, sf_mem_end(), - 16 do the void * stuff 
+            //set the footer equal to the header
+            //set the header equal to the epilogue from the beginnign
+            //now check if newSize is big enough to fit the inputSize, and put in while loop and keep going
+            //if not enough space, mem_end will return null if you run out of space, if it does, set errNo = invalid
+            //if theres space, do splinter or split and put the new block into lists 0-8 but if its epilogue put in wilderness
 
-          
-            } else{ //SPLITTING A BLOCK 
-                //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
-                sf_block* endBlock = (sf_block *)((void *) wildBlock + wildSize);//move endPtr to the end of the block
-                
-                wildBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
-                
-                //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
-                sf_block* nextBlock = (sf_block *)((void *)wildBlock + size); //now we are at the next block, -8 to account for 
+            int newWildSize = wildSize;
 
-                nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
-                
-                nextBlock->header = (wildSize - size); //set the header of the next block //unallocated
+            while(newWildSize < size){
+                sf_mem_grow();
 
-                endBlock->prev_footer = (wildSize - size); //set the footer of the next block
-
-                sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
-                wildSentinel->body.links.next = nextBlock;
-                wildSentinel->body.links.prev = nextBlock;
-                nextBlock->body.links.next = wildSentinel;
-                nextBlock->body.links.prev = wildSentinel;
-
-               // sf_show_heap();
-                
+                if(sf_mem_grow() == NULL){
+                    sf_errno = EINVAL;
+                    return NULL;
+                }
+    
+                newWildSize += 4096; //the new size say 4048 + 4096 lol
+    
+                wildBlock->header = (newSize); //set the new size of the removed wild block
+    
+                sf_block* endTimes= (sf_block*) sf_mem_end(); //4096 bytes added to the heap returns a pointer to the top
+    
+                sf_block* wildEnd = (sf_block *)((void *)endTimes - 16); //now we are the end times 
+    
+                wildEnd->prev_footer = wildBlock->header; // set the prev footer equal to the 4048 + 4096
+                wildEnd->header |= (0x8); //set the epilogue allocated bit to 1
             }
+            
         
        }//end of if wildBool == 1
          
@@ -420,6 +469,8 @@ void *sf_malloc(size_t size) {
         //check if next block is the epilogue, then you put it
        
     //calling memgrow does coalescing => get another 4048 basically combines two blocks
+
+
     
 
     abort();
