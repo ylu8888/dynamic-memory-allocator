@@ -446,37 +446,36 @@ void *sf_malloc(size_t size) {
 
             size_t newWildSize = wildSize;
 
-            int didBreak = -1;
+            //4048 < 30,000
+            while(newWildSize < size){
 
-            while(sf_mem_grow() != NULL) {
-
-                newWildSize += 4096;
-
-                if (newWildSize >= size) {
-                    didBreak = 1;
-                    break;
+                if(sf_mem_grow() == NULL){
+                
+                    printf("i am gGETTNG ERRORRRR\n");
+                    sf_errno = ENOMEM;
+                    printf("%d\n", sf_errno);
+                    return NULL;
+                    printf("HEHEHEHEE\n");
+                }else{
+                    printf("heeiaawodakodwa\n");
                 }
 
-            }
+                 newWildSize += 4096; //the new size say 4048 + 4096 lol
+                 sf_block* freeBlock = (sf_block *)((void *) wildBlock + newWildSize);//move endPtr to the end of the block
+                 freeBlock->header = (newWildSize);
+                 sf_block* freeEnd = (sf_block *)((void *)sf_mem_end() - 16); 
+                 freeEnd->prev_footer = freeBlock->header;
+                 sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
+                    wildSentinel->body.links.next = freeBlock;
+                    wildSentinel->body.links.prev = freeBlock;
+                    freeBlock->body.links.next = wildSentinel;
+                    freeBlock->body.links.prev = wildSentinel;
 
-            if (didBreak != -1) {
-                sf_errno = ENOMEM;
-                return NULL;
 
-            }
+            }//end of newWildSize < size
 
-            // while(newWildSize < size){
-
-            //     if(sf_mem_grow() == NULL){
-            //         sf_errno = ENOMEM;
-            //         return NULL;
-            //     }
     
-            //     newWildSize += 4096; //the new size say 4048 + 4096 lol
-
-            // }//end of newWildSize < size
-
-            wildBlock->header = (newWildSize); //set the new size of the removed wild block
+                wildBlock->header = (newWildSize); //set the new size of the removed wild block
     
                 sf_block* endTimes= (sf_block*) sf_mem_end(); //4096 bytes added to the heap returns a pointer to the top
                  //sf_show_heap();  
@@ -554,3 +553,4 @@ double sf_utilization() {
     // To be implemented.
     abort();
 }
+
