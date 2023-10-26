@@ -446,16 +446,37 @@ void *sf_malloc(size_t size) {
 
             size_t newWildSize = wildSize;
 
-            while(newWildSize < size){
+            int didBreak = -1;
 
-                if(sf_mem_grow() == NULL){
-                    sf_errno = ENOMEM;
-                    return NULL;
+            while(sf_mem_grow() != NULL) {
+
+                newWildSize += 4096;
+
+                if (newWildSize >= size) {
+                    didBreak = 1;
+                    break;
                 }
+
+            }
+
+            if (didBreak != -1) {
+                sf_errno = ENOMEM;
+                return NULL;
+
+            }
+
+            // while(newWildSize < size){
+
+            //     if(sf_mem_grow() == NULL){
+            //         sf_errno = ENOMEM;
+            //         return NULL;
+            //     }
     
-                newWildSize += 4096; //the new size say 4048 + 4096 lol
-    
-                wildBlock->header = (newWildSize); //set the new size of the removed wild block
+            //     newWildSize += 4096; //the new size say 4048 + 4096 lol
+
+            // }//end of newWildSize < size
+
+            wildBlock->header = (newWildSize); //set the new size of the removed wild block
     
                 sf_block* endTimes= (sf_block*) sf_mem_end(); //4096 bytes added to the heap returns a pointer to the top
                  //sf_show_heap();  
@@ -464,9 +485,6 @@ void *sf_malloc(size_t size) {
     
                 wildEnd->prev_footer = (newWildSize); // set the prev footer equal to the 4048 + 4096
                 wildEnd->header |= (0x8); //set the epilogue allocated bit to 1
-
-
-            }//end of newWildSize < size
 
             if((newWildSize - size) < 32){
                     //splintering 
