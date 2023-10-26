@@ -459,18 +459,18 @@ void *sf_malloc(size_t size) {
                 }else{
                     printf("heeiaawodakodwa\n");
                 }
-
-                 newWildSize += 4096; //the new size say 4048 + 4096 lol
-                 sf_block* freeBlock = (sf_block *)((void *) wildBlock + newWildSize);//move endPtr to the end of the block
-                 freeBlock->header = (newWildSize);
-                 sf_block* freeEnd = (sf_block *)((void *)sf_mem_end() - 16); 
-                 freeEnd->prev_footer = freeBlock->header;
-                 sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
+               
+                    newWildSize += 4096; //the new size say 4048 + 4096 lol
+                     sf_block* freeBlock = (sf_block *)((void *) wildBlock);//move endPtr to the end of the block
+                     freeBlock->header = (newWildSize);
+                     sf_block* freeEnd = (sf_block *)((void *)sf_mem_end() - 16); 
+                     freeEnd->prev_footer = freeBlock->header;
+                     sf_block* wildSentinel = &sf_free_list_heads[9]; //move to the sentinel index
                     wildSentinel->body.links.next = freeBlock;
                     wildSentinel->body.links.prev = freeBlock;
                     freeBlock->body.links.next = wildSentinel;
                     freeBlock->body.links.prev = wildSentinel;
-
+              
 
             }//end of newWildSize < size
 
