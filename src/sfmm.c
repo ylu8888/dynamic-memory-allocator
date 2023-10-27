@@ -200,11 +200,11 @@ void *sf_malloc(size_t size) {
 
   int wildBool = 0; //boolean to see if we do wilderness or not lol
 
-    while(block == sentinel && listPtr != 9){ //we are trying to reach a proper sentinel OTHERwise we hit the WILDERNESS
+    while(block == sentinel && listPtr != NUM_FREE_LISTS - 1){ //we are trying to reach a proper sentinel OTHERwise we hit the WILDERNESS
       //  printf("%d\n", listPtr);
         if(block == sentinel){ //this means we have reached the end of the circular link list and restarted at sentinel
             listPtr++;
-            if(listPtr == 9){
+            if(listPtr == NUM_FREE_LISTS - 1){
             wildBool = 1;
             //printf("I broke out and wildbool is now 9\n");
            // printf("%d\n", wildBool);
@@ -220,7 +220,7 @@ void *sf_malloc(size_t size) {
         size_t blockSize = block->header;
         // blockSize >>= 4;
         // blockSize = blockSize & ((1 << 28) - 1); 
-
+        size_t blockSize = block->header;
         int mask = ((1 << (25)) - 1) << 4;
         blockSize = (blockSize & mask); //find the block size using bit manipulation
 
@@ -253,6 +253,26 @@ void *sf_malloc(size_t size) {
                 removedBlock->header |= 0x8;
                 sf_block* splinterPtr = (sf_block *)((void *)removedBlock + blockSize); //removedBlock + the size of blocksize(48) to jump to next block
                 splinterPtr->prev_footer = removedBlock->header;
+
+                //PREV ALLOCATED
+                //if the previous block is allocated then set the current blocks prev allocated bit to 1
+                //this is easy as you have access to the previous block using prevfooter
+            
+                //OR JUST when you create a block, just go to the next block and set its prealloc to 1 
+
+                //if its nto the epligoe u set prev alloc for header and footer
+                //if it is the epilogue u just set the header prev alloc
+
+                //if its the next block you have to set its header prev alloc to 1 AND THEN
+                //jump even more down to its footer and set its prev alloc to 1 as well
+
+                 size_t splinterSize = splinterPtr->header;
+                int mask = ((1 << (25)) - 1) << 4;
+                splinterSize = (splinterSize & mask);
+
+                if(splinterSize == 0){ //this means epilogue
+                }
+                            
                 
                 
             } else{ //SPLITTING A BLOCK
@@ -377,19 +397,16 @@ void *sf_malloc(size_t size) {
 
        //COALESCING
         //say you want to allocate some size, but we cant find it in lists 0-8 or the wilderness
-        printf("SHIEE AT LEAST IM IN WILDBLOCK BOOL LOL\n");
         if(wildBlock == wilderness){  //this means wilderness is empty
             //is the wilderness empty? if so, call memgrow then the previous epilogue becomes the header of the new block,
             //set the new headers blocksize to 4096
             //jump to mem end and set the footer, then set the header to the epilogue
             //now check if the new size fits the input size, 
-            printf("I MADE IT INTO THE EMPTY WILD LOL\n");
             
             sf_block* newBlob = (sf_block *)((void *) sf_mem_end() - 16); //we are at the epilogue
             size_t leBlobSize = 0;
             
             while(leBlobSize < size){
-                printf("WE ARE INSIDE LE WHILE LOOP XD\n");
                 if(sf_mem_grow() == NULL){
                     sf_errno = ENOMEM;
                     return NULL;  
@@ -422,15 +439,14 @@ void *sf_malloc(size_t size) {
                 wildEnd->header |= (0x8); //set the epilogue allocated bit to 1
 
                 if((leBlobSize - size) < 32){//SPLINTERING
-                    printf("WE ARE SPLINTERING FOR SOME REASON\n");
                     newBlob->header |= 0x8;
                     sf_block* splinterCell = (sf_block *)((void *)newBlob + leBlobSize);
                     splinterCell->prev_footer = newBlob->header;
+
                     sf_show_heap();
     
               
                 } else{ //SPLITTING A BLOCK 
-                    printf("SHIEETTT I MADE IT INTO SPITTING\n");
                     //removedBlock->header = removedBlock->header & 0xffffffff0000000f; //change the block size 
                     sf_block* endBlock = (sf_block *)((void *) newBlob + leBlobSize);//move endPtr to the end of the block
                     
