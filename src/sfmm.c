@@ -13,8 +13,13 @@ void *sf_malloc(size_t size) {
     if (size <= 0) {
         return NULL;
     }
-    //size_t ogSize = size; //keep track of original size for payload later UNCOMMENT THIS LATER
-
+    
+    size_t ogSize = size; //keep track of original size for payload later UNCOMMENT THIS LATER
+    ogSize <<= 32;
+    sf_block* ans;
+    //le payload lol
+    //left shift 32
+    //put it onto each allocated block
 
     //if allocation not successful
     // sf_errno = ENOMEM;
@@ -251,6 +256,7 @@ void *sf_malloc(size_t size) {
 
                 //just set the allocated bit for the header and the footer of the removed block
                 removedBlock->header |= 0x8;
+                removedBlock->header |= ogSize;
 
                 size_t alloCheck= (removedBlock->prev_footer >> 3) & 1;
                     if(alloCheck == 1){ //if the block before wildblock is allocated
@@ -313,6 +319,7 @@ void *sf_malloc(size_t size) {
                 sf_block* endBlock = (sf_block *)((void *) removedBlock + blockSize);//move endPtr to the end of the block
                 
                 removedBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+                removedBlock->header |= ogSize;
 
                 size_t alloCheck= (removedBlock->prev_footer >> 3) & 1;
                     if(alloCheck == 1){ //if the block before wildblock is allocated
@@ -322,13 +329,13 @@ void *sf_malloc(size_t size) {
                 //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
                 sf_block* nextBlock = (sf_block *)((void *)removedBlock + size); //now we are at the next block, -8 to account for 
 
-                nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
+                nextBlock->prev_footer = removedBlock->header //set the footer of the allocated block
                 
                 nextBlock->header = (blockSize - size); //set the header of the next block //unallocated
 
                 nextBlock->header |= (1 << 2);
 
-                endBlock->prev_footer = (blockSize - size); //set the footer of the next block
+                endBlock->prev_footer = nextBlock->header //set the footer of the next block
 
                 endBlock->prev_footer |= (1 << 2);
 
@@ -461,6 +468,7 @@ void *sf_malloc(size_t size) {
 
                 if((leBlobSize - size) < 32){//SPLINTERING
                     newBlob->header |= 0x8;
+                    newBlob->header |= ogSize;
 
                     size_t alloCheck= (newBlob->prev_footer >> 3) & 1;
                     if(alloCheck == 1){ //if the block before wildblock is allocated
@@ -491,6 +499,7 @@ void *sf_malloc(size_t size) {
                     sf_block* endBlock = (sf_block *)((void *) newBlob + leBlobSize);//move endPtr to the end of the block
                     
                     newBlob->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+                    newBlob->header |= ogSize;
 
                     size_t alloCheck= (newBlob->prev_footer >> 3) & 1;
                     if(alloCheck == 1){ //if the block before wildblock is allocated
@@ -500,13 +509,13 @@ void *sf_malloc(size_t size) {
                     //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
                     sf_block* nextBlock = (sf_block *)((void *)newBlob + size); //now we are at the next block, -8 to account for 
     
-                    nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
+                    nextBlock->prev_footer = newBlob->header; //set the footer of the allocated block
                     
                     nextBlock->header = (leBlobSize - size); //set the header of the next block //unallocated
 
                     nextBlock->header |= (1 << 2);
 
-                    endBlock->prev_footer = (leBlobSize - size); //set the footer of the next block
+                    endBlock->prev_footer = nextBlock->header; //set the footer of the next block
 
                     endBlock->prev_footer |= (1 << 2);
     
@@ -539,6 +548,7 @@ void *sf_malloc(size_t size) {
                     //splintering 
             
                     wildBlock->header |= 0x8;
+                    wildBlock->header |= ogSize;
                     //size_t alloCheck = wildBlock->prev_footer;
                     size_t alloCheck= (wildBlock->prev_footer >> 3) & 1;
                     if(alloCheck == 1){ //if the block before wildblock is allocated
@@ -569,6 +579,7 @@ void *sf_malloc(size_t size) {
                     sf_block* endBlock = (sf_block *)((void *) wildBlock + wildSize);//move endPtr to the end of the block
                     
                     wildBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+                    wildBlock->header |= ogSize;
 
                     size_t alloCheck= (wildBlock->prev_footer >> 3) & 1;
                     if(alloCheck == 1){ //if the block before wildblock is allocated
@@ -578,13 +589,13 @@ void *sf_malloc(size_t size) {
                     //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
                     sf_block* nextBlock = (sf_block *)((void *)wildBlock + size); //now we are at the next block, -8 to account for 
     
-                    nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
+                    nextBlock->prev_footer = wildBlock->header; //set the footer of the allocated block
                     
                     nextBlock->header = (wildSize - size); //set the header of the next block //unallocated
 
                     nextBlock->header |= (1 << 2);
     
-                    endBlock->prev_footer = (wildSize - size); //set the footer of the next block
+                    endBlock->prev_footer = nextBlock->header; //set the footer of the next block
 
                     endBlock->prev_footer |= (1 << 2);
     
@@ -656,6 +667,8 @@ void *sf_malloc(size_t size) {
                     //splintering 
             
                     wildBlock->header |= 0x8;
+                    wildBlock->header |= ogSize;
+                
                     size_t alloCheck= (wildBlock->prev_footer >> 3) & 1;
                     if(alloCheck == 1){ //if the block before wildblock is allocated
                         wildBlock->header |= (1 << 2); //then set wildblocks prevALloc to 1
@@ -685,6 +698,7 @@ void *sf_malloc(size_t size) {
                     sf_block* endBlock = (sf_block *)((void *) wildBlock + newWildSize);//move endPtr to the end of the block
                     
                     wildBlock->header = (size | 0x8); //changes the header block size AND allocates the bit for removedBlcok
+                   wildBlock->header |= ogSize;
 
                     size_t alloCheck= (wildBlock->prev_footer >> 3) & 1;
                     if(alloCheck == 1){ //if the block before wildblock is allocated
@@ -694,13 +708,13 @@ void *sf_malloc(size_t size) {
                     //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
                     sf_block* nextBlock = (sf_block *)((void *)wildBlock + size); //now we are at the next block, -8 to account for 
     
-                    nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
+                    nextBlock->prev_footer = wildBlock->header; //set the footer of the allocated block
                     
                     nextBlock->header = (newWildSize - size); //set the header of the next block //unallocated
 
                     nextBlock->header |= (1 << 2);
 
-                    endBlock->prev_footer = (newWildSize - size); //set the footer of the next block
+                    endBlock->prev_footer = nextBlock->header; //set the footer of the next block
 
                     endBlock->prev_footer |= (1 << 2);
     
