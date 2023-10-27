@@ -251,6 +251,12 @@ void *sf_malloc(size_t size) {
 
                 //just set the allocated bit for the header and the footer of the removed block
                 removedBlock->header |= 0x8;
+
+                size_t alloCheck= (removedBlock->prev_footer >> 3) & 1;
+                    if(alloCheck == 1){ //if the block before wildblock is allocated
+                        removedBlock->header |= (1 << 2); //then set wildblocks prevALloc to 1
+                    }
+
                 sf_block* splinterPtr = (sf_block *)((void *)removedBlock + blockSize); //removedBlock + the size of blocksize(48) to jump to next block
                 splinterPtr->prev_footer = removedBlock->header;
 
@@ -266,7 +272,7 @@ void *sf_malloc(size_t size) {
                 //if its the next block you have to set its header prev alloc to 1 AND THEN
                 //jump even more down to its footer and set its prev alloc to 1 as well
 
-                size_t splinterSize = splinterPtr->header;
+                size_t splinterSize = splinterPtr->header; //jumping to next block to see its blocksize
                 int mask = ((1 << (25)) - 1) << 4;
                 splinterSize = (splinterSize & mask);
 
@@ -446,6 +452,12 @@ void *sf_malloc(size_t size) {
 
                 if((leBlobSize - size) < 32){//SPLINTERING
                     newBlob->header |= 0x8;
+
+                    size_t alloCheck= (newBlob->prev_footer >> 3) & 1;
+                    if(alloCheck == 1){ //if the block before wildblock is allocated
+                        newBlob->header |= (1 << 2); //then set wildblocks prevALloc to 1
+                    }
+
                     sf_block* splinterCell = (sf_block *)((void *)newBlob + leBlobSize);
                     splinterCell->prev_footer = newBlob->header;
 
@@ -462,7 +474,7 @@ void *sf_malloc(size_t size) {
                         nextJump->prev_footer |= (1 << 2);
                     }
 
-                    //sf_show_heap();
+                    sf_show_heap();
     
               
                 } else{ //SPLITTING A BLOCK 
@@ -486,7 +498,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
     
-                  // sf_show_heap();  
+                   sf_show_heap();  
                 }//end of splitting block
 
         }
@@ -509,6 +521,12 @@ void *sf_malloc(size_t size) {
                     //splintering 
             
                     wildBlock->header |= 0x8;
+                    //size_t alloCheck = wildBlock->prev_footer;
+                    size_t alloCheck= (wildBlock->prev_footer >> 3) & 1;
+                    if(alloCheck == 1){ //if the block before wildblock is allocated
+                        wildBlock->header |= (1 << 2); //then set wildblocks prevALloc to 1
+                    }
+
                     sf_block* splinterCell = (sf_block *)((void *)wildBlock + wildSize);
                     splinterCell->prev_footer = wildBlock->header;
 
@@ -549,7 +567,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
     
-                   // sf_show_heap();  
+                   sf_show_heap();  
                 }//end of splitting block
 
         //end of else statement
@@ -606,6 +624,11 @@ void *sf_malloc(size_t size) {
                     //splintering 
             
                     wildBlock->header |= 0x8;
+                    size_t alloCheck= (wildBlock->prev_footer >> 3) & 1;
+                    if(alloCheck == 1){ //if the block before wildblock is allocated
+                        wildBlock->header |= (1 << 2); //then set wildblocks prevALloc to 1
+                    }
+
                     sf_block* splinterCell = (sf_block *)((void *)wildBlock + newWildSize);
                     splinterCell->prev_footer = wildBlock->header;
 
