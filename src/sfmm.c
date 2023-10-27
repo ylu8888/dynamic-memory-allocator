@@ -321,7 +321,11 @@ void *sf_malloc(size_t size) {
                 
                 nextBlock->header = (blockSize - size); //set the header of the next block //unallocated
 
+                nextBlock->header |= (1 << 2);
+
                 endBlock->prev_footer = (blockSize - size); //set the footer of the next block
+
+                endBlock->prev_footer |= (1 << 2);
 
                 size_t epiCheck = endBlock->header;
 
@@ -490,7 +494,11 @@ void *sf_malloc(size_t size) {
                     
                     nextBlock->header = (leBlobSize - size); //set the header of the next block //unallocated
 
+                    nextBlock->header |= (1 << 2);
+
                     endBlock->prev_footer = (leBlobSize - size); //set the footer of the next block
+
+                    endBlock->prev_footer |= (1 << 2);
     
                     sf_block* wildSentinel = &sf_free_list_heads[NUM_FREE_LISTS - 1]; //move to the sentinel index
                     wildSentinel->body.links.next = nextBlock;
@@ -558,8 +566,12 @@ void *sf_malloc(size_t size) {
                     nextBlock->prev_footer = (size | 0x8); //set the footer of the allocated block
                     
                     nextBlock->header = (wildSize - size); //set the header of the next block //unallocated
+
+                    nextBlock->header |= (1 << 2);
     
                     endBlock->prev_footer = (wildSize - size); //set the footer of the next block
+
+                    endBlock->prev_footer |= (1 << 2);
     
                     sf_block* wildSentinel = &sf_free_list_heads[NUM_FREE_LISTS - 1]; //move to the sentinel index
                     wildSentinel->body.links.next = nextBlock;
@@ -661,7 +673,11 @@ void *sf_malloc(size_t size) {
                     
                     nextBlock->header = (newWildSize - size); //set the header of the next block //unallocated
 
+                    nextBlock->header |= (1 << 2);
+
                     endBlock->prev_footer = (newWildSize - size); //set the footer of the next block
+
+                    endBlock->prev_footer |= (1 << 2);
     
                     sf_block* wildSentinel = &sf_free_list_heads[NUM_FREE_LISTS - 1]; //move to the sentinel index
                     wildSentinel->body.links.next = nextBlock;
