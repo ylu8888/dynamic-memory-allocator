@@ -217,7 +217,7 @@ void *sf_malloc(size_t size) {
 
     while(block != sentinel){
        // printf("I am in the sentinel while loop\n");
-        size_t blockSize = block->header;
+      
         // blockSize >>= 4;
         // blockSize = blockSize & ((1 << 28) - 1); 
         size_t blockSize = block->header;
@@ -266,11 +266,17 @@ void *sf_malloc(size_t size) {
                 //if its the next block you have to set its header prev alloc to 1 AND THEN
                 //jump even more down to its footer and set its prev alloc to 1 as well
 
-                 size_t splinterSize = splinterPtr->header;
+                size_t splinterSize = splinterPtr->header;
                 int mask = ((1 << (25)) - 1) << 4;
                 splinterSize = (splinterSize & mask);
 
                 if(splinterSize == 0){ //this means epilogue
+                    splinterPtr->header |= (1 << 2);
+                }else{//this means its not the epilogue but the next block
+                    splinterPtr->header |= (1 << 2);
+
+                    sf_block* nextJump = (sf_block *)((void*)splinterPtr + splinterSize);
+                    nextJump->prev_footer |= (1 << 2);
                 }
                             
                 
@@ -443,7 +449,20 @@ void *sf_malloc(size_t size) {
                     sf_block* splinterCell = (sf_block *)((void *)newBlob + leBlobSize);
                     splinterCell->prev_footer = newBlob->header;
 
-                    sf_show_heap();
+                    size_t splinterSize = splinterCell->header;
+                    int mask = ((1 << (25)) - 1) << 4;
+                    splinterSize = (splinterSize & mask);
+
+                    if(splinterSize == 0){ //this means epilogue
+                        splinterCell->header |= (1 << 2);
+                    }else{//this means its not the epilogue but the next block
+                        splinterCell->header |= (1 << 2);
+
+                        sf_block* nextJump = (sf_block *)((void*)splinterCell + splinterSize);
+                        nextJump->prev_footer |= (1 << 2);
+                    }
+
+                    //sf_show_heap();
     
               
                 } else{ //SPLITTING A BLOCK 
@@ -467,7 +486,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
     
-                   sf_show_heap();  
+                  // sf_show_heap();  
                 }//end of splitting block
 
         }
@@ -492,7 +511,21 @@ void *sf_malloc(size_t size) {
                     wildBlock->header |= 0x8;
                     sf_block* splinterCell = (sf_block *)((void *)wildBlock + wildSize);
                     splinterCell->prev_footer = wildBlock->header;
-                    //sf_show_heap();
+
+                    size_t splinterSize = splinterCell->header;
+                    int mask = ((1 << (25)) - 1) << 4;
+                    splinterSize = (splinterSize & mask);
+
+                    if(splinterSize == 0){ //this means epilogue
+                        splinterCell->header |= (1 << 2);
+                    }else{//this means its not the epilogue but the next block
+                        splinterCell->header |= (1 << 2);
+
+                        sf_block* nextJump = (sf_block *)((void*)splinterCell + splinterSize);
+                        nextJump->prev_footer |= (1 << 2);
+                    }
+
+                    sf_show_heap();
     
               
                 } else{ //SPLITTING A BLOCK 
@@ -516,7 +549,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
     
-                    //sf_show_heap();  
+                   // sf_show_heap();  
                 }//end of splitting block
 
         //end of else statement
@@ -559,7 +592,6 @@ void *sf_malloc(size_t size) {
 
             }//end of newWildSize < size
 
-    
                 wildBlock->header = (newWildSize); //set the new size of the removed wild block
     
                 sf_block* endTimes= (sf_block*) sf_mem_end(); //4096 bytes added to the heap returns a pointer to the top
@@ -576,7 +608,21 @@ void *sf_malloc(size_t size) {
                     wildBlock->header |= 0x8;
                     sf_block* splinterCell = (sf_block *)((void *)wildBlock + newWildSize);
                     splinterCell->prev_footer = wildBlock->header;
-                   // sf_show_heap();
+
+                    size_t splinterSize = splinterCell->header;
+                    int mask = ((1 << (25)) - 1) << 4;
+                    splinterSize = (splinterSize & mask);
+
+                    if(splinterSize == 0){ //this means epilogue
+                        splinterCell->header |= (1 << 2);
+                    }else{//this means its not the epilogue but the next block
+                        splinterCell->header |= (1 << 2);
+
+                        sf_block* nextJump = (sf_block *)((void*)splinterCell + splinterSize);
+                        nextJump->prev_footer |= (1 << 2);
+                    }
+
+                   sf_show_heap();
     
               
                 } else{ //SPLITTING A BLOCK 
