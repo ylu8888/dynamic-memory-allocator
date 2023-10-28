@@ -910,11 +910,18 @@ void sf_free(void *pp) {
         // size_t removeSize = remover->header;
         // int mask4 = ((1 << (25)) - 1) << 4;
         // removeSize = (removeSize & mask4);
+          
         if(remover == prevBlock || remover == nextBlock){
-            checker->body.links.next = checker;
-            checker->body.links.prev = checker;
+            sf_block* prevRemove = remover->body.links.prev;
+            sf_block* nextRemove = remover->body.links.next;
+            
             remover->body.links.next = NULL;
             remover->body.links.prev = NULL;
+
+            prevRemove->body.links.next = nextRemove;
+            nextRemove->body.links.prev = prevRemove;
+
+            
         }
 
     }
