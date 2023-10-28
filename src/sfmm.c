@@ -849,6 +849,8 @@ void sf_free(void *pp) {
      printf("This is the allocated bit of next block:");
      printf("%zu\n", nextBlockAllo);
 
+
+
     //coalesce depending on the 4 case scenarios
     if(prevBlockAllo == 1 && nextBlockAllo == 1){
         printf("IM IN FIRST\n");
@@ -897,6 +899,24 @@ void sf_free(void *pp) {
         endBlock->prev_footer = prevBlock->header; //set the footer of the next block
         ans = prevBlock;
         
+    }
+
+      for(int i = 0 ; i < NUM_FREE_LISTS - 1; i++){
+        sf_block* checker = &sf_free_list_heads[i];
+        if(checker->body.links.next == checker){
+            continue;
+        }
+        sf_block* remover = checker->body.links.next; 
+        // size_t removeSize = remover->header;
+        // int mask4 = ((1 << (25)) - 1) << 4;
+        // removeSize = (removeSize & mask4);
+        if(remover == prevBlock || remover == nextBlock){
+            checker->body.links.next = checker;
+            checker->body.links.prev = checker;
+            remover->body.links.next = NULL;
+            remover->body.links.prev = NULL;
+        }
+
     }
 
     if(sum == M){
