@@ -798,8 +798,101 @@ void sf_free(void *pp) {
     if(prevAllo == 0 && prevBlockAllo == 1){ //if prev alloc is 0 but alloc of previous block is 1
         abort();
     }
-    
 
+    //free the block
+    realPP->header &= ~(1 << 3);
+
+    //get the blocksize of the previous block
+    size_t prevSize = realPP->prev_footer;
+    int mask2 = ((1 << (25)) - 1) << 4;
+    prevSize = (prevSize & mask2);
+    //get the previous block
+    sf_block* prevBlock = (realPP - prevSize); 
+
+    //get the allocated bit of the next block
+    size_t nextBlockAllo = (nextBlock->header >> 3) & 1; 
+    //get the blocksize of the next block
+    size_t nextSize = nextBlock->header;
+    int mask3 = ((1 << (25)) - 1) << 4;
+    nextSize = (nextSize & mask3);
+
+    sf_block* endBlock = (nextBlock + nextSize); 
+
+    size_t M = 32;
+    int listPtr = 0;
+    size_t sum = 0;
+    sf_block * ans;
+    
+    //coalesce depending on the 4 case scenarios
+    if(prevBlockAllo == 1 && nextBlockAllo == 1){
+        realPP->header &= ~(1 << 3); //set current block to be free
+        nextBlock->prev_footer = realPP->header;
+        sum = blockSize;
+        ans = realPP;
+    }
+    else if(prevBlockAllo == 1 && nextBlockAllo == 0){
+        sum = blockSize + nextSize;
+        realPP->header = (sum); //combination of next and curr blocksizes
+        realPP->header &= ~(1 << 3); //set current block to be free
+        endBlock->prev_footer = realPP->header; //footer of next block is updated
+        ans = realPP;
+    
+    }
+    else if(prevBlockAllo == 0 && nextBlockAllo == 1){
+        sum = prevSize + blockSize;
+        prevBlock->header = (sum); //update combo sum
+        prevBlock->header &= ~(1 << 3); //set prev block to free
+        nextBlock->prev_footer = prevBlock->header; //set the current blocks footer
+        ans = prevBlock;
+        
+    }
+    else if(prevBlockAllo == 0 && nextBlockAllo == 0){
+        sum = prevSize + blockSize;
+        sum += nextSize; //combo sum
+        prevBlock->header = (sum);
+        prevBlock->header &= ~(1 << 3); //free the prev block
+        endBlock->prev_footer = prevBlock->header; //set the footer of the next block
+        ans = prevBlock;
+        
+    }
+
+    if(sum == M){
+        listPtr = 0;
+    }
+    else if(M < sum && sum <= 2 * M){
+        listPtr = 1;
+    }    
+    else if(2 * M < sum && sum <= 3 * M){
+        listPtr = 2;
+    }
+    else if(3 * M < sum && sum <= 5 * M){
+        listPtr = 3;
+    }
+    else if(5 * M < sum && sum <= 8 * M){
+        listPtr = 4;
+    }    
+    else if(8 * M < sum && sum <= 13 * M){
+        listPtr = 5;
+    }
+    else if(13 * M < sum && sum <= 21 * M){
+        listPtr = 6;
+    }
+    else if(21 * M < sum && sum <= 34 * M){
+        listPtr = 7;
+    }
+    else if(sum > 34 * M){
+        listPtr = 8; //9th index aka the one before wilderness
+    }
+
+    //insert block at the front of the appropriate free list
+    sf_block* sentinel = &sf_free_list_heads[listPtr]; //find the start of sentinel aka the free list index from listPtr
+
+    sf_block* block = sentinel->body.links.next;  //set the block pointer to the next one in sentinel
+
+    sentinel.next = ans;
+    block.prev = ans;
+    ans.prev = sentinel;
+    ans.next = block;
     
    // abort();
 }
