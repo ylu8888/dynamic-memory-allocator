@@ -828,12 +828,12 @@ void sf_free(void *pp) {
         printf("IM IN FIRST\n");
         realPP->header &= ~(1 << 3); //set current block to be free
         nextBlock->prev_footer = realPP->header;
-        sum = blockSize;
+        sum = blockSize + 16;
         ans = realPP;
     }
     else if(prevBlockAllo == 1 && nextBlockAllo == 0){
         printf("IM IN SECOND\n");
-        sum = blockSize + nextSize;
+        sum = blockSize + nextSize + 16;
         realPP->header = (sum); //combination of next and curr blocksizes
         realPP->header &= ~(1 << 3); //set current block to be free
         endBlock->prev_footer = realPP->header; //footer of next block is updated
@@ -842,7 +842,7 @@ void sf_free(void *pp) {
     }
     else if(prevBlockAllo == 0 && nextBlockAllo == 1){
         printf("IM IN THIRD\n");
-        sum = prevSize + blockSize;
+        sum = prevSize + blockSize + 16;
         prevBlock->header = (sum); //update combo sum
         prevBlock->header &= ~(1 << 3); //set prev block to free
         nextBlock->prev_footer = prevBlock->header; //set the current blocks footer
@@ -851,7 +851,7 @@ void sf_free(void *pp) {
     }
     else if(prevBlockAllo == 0 && nextBlockAllo == 0){
         printf("IM IN LAST\n");
-        sum = prevSize + blockSize;
+        sum = prevSize + blockSize + 16;
         sum += nextSize; //combo sum
         prevBlock->header = (sum);
         prevBlock->header &= ~(1 << 3); //free the prev block
