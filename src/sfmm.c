@@ -9,6 +9,8 @@
 #include "sfmm.h"
 #include <errno.h>
 
+size_t fib(int n);
+
 void *sf_malloc(size_t size) {
     if (size <= 0) {
         return NULL;
@@ -168,32 +170,15 @@ void *sf_malloc(size_t size) {
     size_t M = 32;
     int listPtr = 0;
     
-    if(size == M){
-        listPtr = 0;
+     for (int i = 0; i < NUM_FREE_LISTS - 2; i++) {
+    if (size <= (i == 0 ? M : M * fib(i + 2))) {
+        listPtr = i;
+        break;
     }
-    else if(M < size && size <= 2 * M){
-        listPtr = 1;
-    }    
-    else if(2 * M < size && size <= 3 * M){
-        listPtr = 2;
     }
-    else if(3 * M < size && size <= 5 * M){
-        listPtr = 3;
-    }
-    else if(5 * M < size && size <= 8 * M){
-        listPtr = 4;
-    }    
-    else if(8 * M < size && size <= 13 * M){
-        listPtr = 5;
-    }
-    else if(13 * M < size && size <= 21 * M){
-        listPtr = 6;
-    }
-    else if(21 * M < size && size <= 34 * M){
-        listPtr = 7;
-    }
-    else if(size > 34 * M){
-        listPtr = 8; //9th index aka the one before wilderness
+
+    if (size > (fib(NUM_FREE_LISTS - 2) * M)) {
+        listPtr = NUM_FREE_LISTS - 2; // Set to the index before the wilderness
     }
 
     sf_block* sentinel = &sf_free_list_heads[listPtr]; //find the start of sentinel aka the free list index from listPtr
@@ -364,32 +349,15 @@ void *sf_malloc(size_t size) {
                 else{  //put it into the sentinels array respectively
                     size_t newSize = blockSize - size; //48 - 32 = 16
                      
-                    if(newSize == M){
-                        listPtr = 0;
+                     for (int i = 0; i < NUM_FREE_LISTS - 2; i++) {
+                        if (newSize <= (i == 0 ? M : M * fib(i + 2))) {
+                            listPtr = i;
+                            break;
+                        }
                     }
-                    else if(M < newSize && newSize <= 2 * M){
-                        listPtr = 1;
-                    }    
-                    else if(2 * M < newSize && newSize <= 3 * M){
-                        listPtr = 2;
-                    }
-                    else if(3 * M < newSize && newSize <= 5 * M){
-                        listPtr = 3;
-                    }
-                    else if(5 * M < newSize && newSize <= 8 * M){
-                        listPtr = 4;
-                    }    
-                    else if(8 * M < newSize && newSize <= 13 * M){
-                        listPtr = 5;
-                    }
-                    else if(13 * M < newSize && newSize <= 21 * M){
-                        listPtr = 6;
-                    }
-                    else if(21 * M < newSize && newSize <= 34 * M){
-                        listPtr = 7;
-                    }
-                    else if(newSize > 34 * M){
-                        listPtr = 8; //9th index aka the one before wilderness
+
+                    if (newSize > (fib(NUM_FREE_LISTS - 2) * M)) {
+                        listPtr = NUM_FREE_LISTS - 2; // Set to the index before the wilderness
                     }
 
                     //after finding the size class, iterate through that link list and add the newblock
@@ -856,6 +824,10 @@ void sf_free(void *pp) {
         printf("IM IN FIRST\n");
         realPP->header &= ~(1 << 3); //set current block to be free
         realPP->header &= masker;
+        if(prevBlockAllo == 1){
+            realPP->header |= (1 << 2);
+        }
+        nextBlock->header &= 0x00000000FFFFFFFB; // remove the prevAlloc of the next block
         nextBlock->prev_footer = realPP->header;
         sum = blockSize;
         ans = realPP;
@@ -870,6 +842,7 @@ void sf_free(void *pp) {
             realPP->header |= (1 << 2);
         }
         endBlock->prev_footer = realPP->header; //footer of next block is updated
+        endBlock->header &= 0x00000000FFFFFFFB; //free the prevAlloc of next block
         ans = realPP;
     
     }
@@ -883,6 +856,7 @@ void sf_free(void *pp) {
             prevBlock->header |= (1 << 2);
         }
         nextBlock->prev_footer = prevBlock->header; //set the current blocks footer
+        nextBlock->header &= 0x00000000FFFFFFFB;
         ans = prevBlock;
         
     }
@@ -897,6 +871,7 @@ void sf_free(void *pp) {
             prevBlock->header |= (1 << 2);
         }
         endBlock->prev_footer = prevBlock->header; //set the footer of the next block
+        endBlock->header &= 0x00000000FFFFFFFB;
         ans = prevBlock;
         
     }
@@ -926,35 +901,18 @@ void sf_free(void *pp) {
 
     }
 
-    if(sum == M){
-        listPtr = 0;
-    }
-    else if(M < sum && sum <= 2 * M){
-        listPtr = 1;
-    }    
-    else if(2 * M < sum && sum <= 3 * M){
-        listPtr = 2;
-    }
-    else if(3 * M < sum && sum <= 5 * M){
-        listPtr = 3;
-    }
-    else if(5 * M < sum && sum <= 8 * M){
-        listPtr = 4;
-    }    
-    else if(8 * M < sum && sum <= 13 * M){
-        listPtr = 5;
-    }
-    else if(13 * M < sum && sum <= 21 * M){
-        listPtr = 6;
-    }
-    else if(21 * M < sum && sum <= 34 * M){
-        listPtr = 7;
-    }
-    else if(sum > 34 * M){
-        listPtr = 8; //9th index aka the one before wilderness
+     for (int i = 0; i < NUM_FREE_LISTS - 2; i++) {
+    if (sum <= (i == 0 ? M : M * fib(i + 2))) {
+        listPtr = i;
+        break;
+        }
     }
 
-    //insert block at the front of the appropriate free list
+    if (sum > (fib(NUM_FREE_LISTS - 1) * M)) {
+        listPtr = NUM_FREE_LISTS - 2; // Set to the index before the wilderness
+    }
+
+     //insert block at the front of the appropriate free list
     sf_block* sentinel = &sf_free_list_heads[listPtr]; //find the start of sentinel aka the free list index from listPtr
 
     sf_block* block = sentinel->body.links.next;  //set the block pointer to the next one in sentinel
@@ -982,4 +940,19 @@ double sf_fragmentation() {
 double sf_utilization() {
     // To be implemented.
     abort();
+}
+
+size_t fib(int n) {
+    if (n <= 0) return 0;
+    if (n == 1) return 1;
+
+    size_t a = 0;
+    size_t b = 1;
+    size_t temp = 0;
+    for (int i = 2; i <= n; i++) {
+        temp = a + b;
+        a = b;
+        b = temp;
+    }
+    return b;
 }
