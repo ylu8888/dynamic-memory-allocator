@@ -825,12 +825,14 @@ void sf_free(void *pp) {
     
     //coalesce depending on the 4 case scenarios
     if(prevBlockAllo == 1 && nextBlockAllo == 1){
+        printf("IM IN FIRST\n");
         realPP->header &= ~(1 << 3); //set current block to be free
         nextBlock->prev_footer = realPP->header;
         sum = blockSize;
         ans = realPP;
     }
     else if(prevBlockAllo == 1 && nextBlockAllo == 0){
+        printf("IM IN SECOND\n");
         sum = blockSize + nextSize;
         realPP->header = (sum); //combination of next and curr blocksizes
         realPP->header &= ~(1 << 3); //set current block to be free
@@ -839,6 +841,7 @@ void sf_free(void *pp) {
     
     }
     else if(prevBlockAllo == 0 && nextBlockAllo == 1){
+        printf("IM IN THIRD\n");
         sum = prevSize + blockSize;
         prevBlock->header = (sum); //update combo sum
         prevBlock->header &= ~(1 << 3); //set prev block to free
@@ -847,6 +850,7 @@ void sf_free(void *pp) {
         
     }
     else if(prevBlockAllo == 0 && nextBlockAllo == 0){
+        printf("IM IN LAST\n");
         sum = prevSize + blockSize;
         sum += nextSize; //combo sum
         prevBlock->header = (sum);
@@ -889,10 +893,10 @@ void sf_free(void *pp) {
 
     sf_block* block = sentinel->body.links.next;  //set the block pointer to the next one in sentinel
 
-    sentinel.next = ans;
-    block.prev = ans;
-    ans.prev = sentinel;
-    ans.next = block;
+    sentinel->body.links.next = ans;
+    block->body.links.prev = ans;
+    ans->body.links.prev = sentinel;
+    ans->body.links.next = block;
     
    // abort();
 }
