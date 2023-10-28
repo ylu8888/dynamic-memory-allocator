@@ -290,6 +290,8 @@ void *sf_malloc(size_t size) {
                     sf_block* nextJump = (sf_block *)((void*)splinterPtr + splinterSize);
                     nextJump->prev_footer |= (1 << 2);
                 }
+
+                ans = removedBlock;
                             
                 
                 
@@ -329,15 +331,17 @@ void *sf_malloc(size_t size) {
                 //we add the size of input to the removedBlock(which is a ptr that points to the top of the free block)
                 sf_block* nextBlock = (sf_block *)((void *)removedBlock + size); //now we are at the next block, -8 to account for 
 
-                nextBlock->prev_footer = removedBlock->header //set the footer of the allocated block
+                nextBlock->prev_footer = removedBlock->header; //set the footer of the allocated block
                 
                 nextBlock->header = (blockSize - size); //set the header of the next block //unallocated
 
                 nextBlock->header |= (1 << 2);
 
-                endBlock->prev_footer = nextBlock->header //set the footer of the next block
+                endBlock->prev_footer = nextBlock->header; //set the footer of the next block
 
                 endBlock->prev_footer |= (1 << 2);
+
+                ans = removedBlock;
 
                 size_t epiCheck = endBlock->header;
 
@@ -491,6 +495,8 @@ void *sf_malloc(size_t size) {
                         nextJump->prev_footer |= (1 << 2);
                     }
 
+                    ans = newBlob;
+
                     sf_show_heap();
     
               
@@ -524,6 +530,8 @@ void *sf_malloc(size_t size) {
                     wildSentinel->body.links.prev = nextBlock;
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
+
+                    ans = newBlob;
     
                    sf_show_heap();  
                 }//end of splitting block
@@ -571,6 +579,8 @@ void *sf_malloc(size_t size) {
                         nextJump->prev_footer |= (1 << 2);
                     }
 
+                    ans = wildBlock;
+
                     sf_show_heap();
     
               
@@ -604,6 +614,8 @@ void *sf_malloc(size_t size) {
                     wildSentinel->body.links.prev = nextBlock;
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
+
+                    ans = wildBlock;
     
                    sf_show_heap();  
                 }//end of splitting block
@@ -689,7 +701,7 @@ void *sf_malloc(size_t size) {
                         sf_block* nextJump = (sf_block *)((void*)splinterCell + splinterSize);
                         nextJump->prev_footer |= (1 << 2);
                     }
-
+                    ans = wildBlock;
                    sf_show_heap();
     
               
@@ -723,6 +735,8 @@ void *sf_malloc(size_t size) {
                     wildSentinel->body.links.prev = nextBlock;
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
+
+                    ans = wildBlock;
     
                    sf_show_heap();  
                 }//end of splitting block
@@ -739,7 +753,7 @@ void *sf_malloc(size_t size) {
    
  }//end of if wildbool == 1
 
-    return NULL;
+    return ans;
 
 }
 
