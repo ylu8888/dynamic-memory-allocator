@@ -773,7 +773,7 @@ void sf_free(void *pp) {
     size_t prevBlockAllo= (realPP->prev_footer >> 3) & 1;
 
     //to get to the next block after PP
-    sf_block* nextBlock = (sf_block*)(pp + blockSize);
+    sf_block* nextBlock = (sf_block*)((void*)pp + blockSize);
 
     if(pp == NULL){  //CHECK FOR INVALID POINTER
         printf("null ptr\n");
@@ -818,7 +818,7 @@ void sf_free(void *pp) {
     int mask2 = ((1 << (25)) - 1) << 4;
     prevSize = (prevSize & mask2);
     //get the previous block
-    sf_block* prevBlock = (sf_block*)(pp - prevSize); 
+    sf_block* prevBlock = (sf_block*)((void*)pp - prevSize); 
 
     
     //get the blocksize of the next block
@@ -829,7 +829,7 @@ void sf_free(void *pp) {
     //get the allocated bit of the next block
     size_t nextBlockAllo = (nextBlock->header >> 3) & 1; 
 
-    sf_block* endBlock = (nextBlock + nextSize); 
+    sf_block* endBlock = (sf_block*)((void*)nextBlock + nextSize); 
 
     size_t M = 32;
     int listPtr = 0;
@@ -860,10 +860,13 @@ void sf_free(void *pp) {
     }
     else if(prevBlockAllo == 1 && nextBlockAllo == 0){
         printf("IM IN SECOND\n");
-        sum = blockSize + prevSize;
+        sum = blockSize + nextSize;
         realPP->header = (sum); //combination of next and curr blocksizes
         realPP->header &= ~(1 << 3); //set current block to be free
         realPP->header &= masker;
+        if(prevBlockAllo == 1){
+            realPP->header |= (1 << 2);
+        }
         endBlock->prev_footer = realPP->header; //footer of next block is updated
         ans = realPP;
     
@@ -874,6 +877,9 @@ void sf_free(void *pp) {
         prevBlock->header = (sum); //update combo sum
         prevBlock->header &= ~(1 << 3); //set prev block to free
         prevBlock->header &= masker;
+        if(prevBlockAllo == 1 || prevAllo == 1){
+            prevBlock->header |= (1 << 2);
+        }
         nextBlock->prev_footer = prevBlock->header; //set the current blocks footer
         ans = prevBlock;
         
@@ -885,6 +891,9 @@ void sf_free(void *pp) {
         prevBlock->header = (sum);
         prevBlock->header &= ~(1 << 3); //free the prev block
         prevBlock->header &= masker;
+        if(prevBlockAllo == 1 || prevAllo == 1){
+            prevBlock->header |= (1 << 2);
+        }
         endBlock->prev_footer = prevBlock->header; //set the footer of the next block
         ans = prevBlock;
         
