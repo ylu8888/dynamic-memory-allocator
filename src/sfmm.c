@@ -777,7 +777,7 @@ void sf_free(void *pp) {
     if(pp == NULL){  //CHECK FOR INVALID POINTER
         abort(); 
     }
-    if(((size_t) aliCheck + 16) % 16 != 0){ //if not 16 byte aligned
+    if(((size_t) realPP + 16) % 16 != 0){ //if not 16 byte aligned
         abort();
     }
     if(blockSize < 32){   //if blocksize < 32
@@ -786,10 +786,10 @@ void sf_free(void *pp) {
     if(blockSize % 16 != 0){ //if blocksize not multiple of 16
         abort();
     }
-    if(realPP->header < (sf_mem_start() + 16)){ //header of block is before start of first block in heap 
+    if((void *)realPP->header < ((void *)sf_mem_start() + 16)){ //header of block is before start of first block in heap 
         abort();
     }
-    if(nextBlock->prev_footer > (sf_mem_end() - 16)){//footer of block is after the end of last block in heap
+    if((void *)nextBlock->prev_footer > ((void *)sf_mem_end() - 16)){//footer of block is after the end of last block in heap
         abort();
     }
     if(alloCheck == 0){ //if allocated bit of header is 0
