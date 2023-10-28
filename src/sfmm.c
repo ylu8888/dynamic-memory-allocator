@@ -758,8 +758,51 @@ void *sf_malloc(size_t size) {
 }
 
 void sf_free(void *pp) {
-    // To be implemented.
-    abort();
+    //this gets the blocksize
+    size_t blockSize = (sf_block*) pp->header;
+    int mask = ((1 << (25)) - 1) << 4;
+    blockSize = (blockSize & mask);
+
+    //this gets the allocated bit
+    size_t alloCheck = (((sf_block*) pp->header) >> 3) & 1;
+    //this gets the PrevAlloc bit
+    size_t prevAllo= (((sf_block*)pp->header) >> 2) & 1;
+    //get the allocated bit of the PREvious block
+    size_t prevBlockAllo= (((sf_block*)pp->prev_footer) >> 3) & 1;
+
+    sf_block* aliCheck = (sf_block*) pp;//memory address checker of pp
+
+    //to get to the next block after PP
+    sf_block* nextBlock = ((sf_block*) pp + blockSize);
+
+    if(pp == NULL){  //CHECK FOR INVALID POINTER
+        abort(); 
+    }
+    if(((size_t) aliCheck + 16) % 16 != 0){ //if not 16 byte aligned
+        abort();
+    }
+    if(blockSize < 32){   //if blocksize < 32
+        abort();
+    }
+    if(blockSize % 16 != 0){ //if blocksize not multiple of 16
+        abort();
+    }
+    if((sf_block*) pp->header < (sf_mem_start() + 16)){ //header of block is before start of first block in heap 
+        abort();
+    }
+    if((sf_block*) nextBlock->prev_footer > (sf_mem_end() - 16)){//footer of block is after the end of last block in heap
+        abort();
+    }
+    if(alloCheck == 0){ //if allocated bit of header is 0
+        abort();
+    }
+    if(prevAllo == 0 && prevBlockAllo == 1){ //if prev alloc is 0 but alloc of previous block is 1
+        abort();
+    }
+    
+
+    
+   // abort();
 }
 
 void *sf_realloc(void *pp, size_t rsize) {
