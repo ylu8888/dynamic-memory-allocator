@@ -759,7 +759,7 @@ void sf_free(void *pp) {
         //printf("not multiple of 16\n");
         abort();
     }
-    if((void *)realPP < ((void *)sf_mem_start() + 16)){ //header of block is before start of first block in heap 
+    if((void *)realPP < ((void *)sf_mem_start() + 32)){ //header of block is before start of first block in heap 
         //printf("header is before memstart\n");
         abort();
     }
@@ -785,6 +785,9 @@ void sf_free(void *pp) {
     prevSize = (prevSize & mask2);
     //get the previous block
     sf_block* prevBlock = (sf_block*)((void*)pp - prevSize); 
+    
+
+    size_t prevBlockPrevAllo= (prevBlock->header >> 2) & 1;
 
     
     //get the blocksize of the next block
@@ -803,6 +806,18 @@ void sf_free(void *pp) {
     size_t masker = 0x00000000FFFFFFFF;
     sf_block * ans = NULL;
 
+        printf("This is the blockSize:");
+     printf("%zu\n", blockSize);
+     printf("This is the nextSize:");
+     printf("%zu\n", nextSize);
+     printf("This is the prevSize:");
+     printf("%zu\n", prevSize);
+
+     printf("This is the allocated bit of previous block:");
+     printf("%zu\n", prevBlockAllo);
+     printf("This is the allocated bit of next block:");
+     printf("%zu\n", nextBlockAllo);
+
     //coalesce depending on the 4 case scenarios
     if(prevBlockAllo == 1 && nextBlockAllo == 1){
      
@@ -811,8 +826,9 @@ void sf_free(void *pp) {
         if(prevBlockAllo == 1){
             realPP->header |= (1 << 2);
         }
-        nextBlock->header &= 0x00000000FFFFFFFB; // remove the prevAlloc of the next block
+        
         nextBlock->prev_footer = realPP->header;
+        nextBlock->header = nextBlock->header & 0x00000000FFFFFFFB; // remove the prevAlloc of the next block
         sum = blockSize;
         ans = realPP;
     }
@@ -821,8 +837,8 @@ void sf_free(void *pp) {
         sum = blockSize + nextSize;
         realPP->header = (sum); //combination of next and curr blocksizes
         realPP->header &= ~(1 << 3); //set current block to be free
-        realPP->header &= masker;
-        if(prevBlockAllo == 1){
+        realPP->header &= masker; //cleasr teh payload
+        if(prevBlockAllo == 1 || prevAllo == 1){
             realPP->header |= (1 << 2);
         }
         endBlock->prev_footer = realPP->header; //footer of next block is updated
@@ -835,8 +851,8 @@ void sf_free(void *pp) {
         sum = prevSize + blockSize;
         prevBlock->header = (sum); //update combo sum
         prevBlock->header &= ~(1 << 3); //set prev block to free
-        prevBlock->header &= masker;
-        if(prevBlockAllo == 1 || prevAllo == 1){
+        prevBlock->header &= masker; //clear the payload
+        if(prevBlockAllo == 1 || prevAllo == 1 || prevBlockPrevAllo == 1){
             prevBlock->header |= (1 << 2);
         }
         nextBlock->prev_footer = prevBlock->header; //set the current blocks footer
