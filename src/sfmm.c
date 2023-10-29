@@ -744,39 +744,37 @@ void sf_free(void *pp) {
     sf_block* nextBlock = (sf_block*)((void*)pp + blockSize);
 
     if(pp == NULL){  //CHECK FOR INVALID POINTER
-        printf("null ptr\n");
+        //printf("null ptr\n");
         abort(); 
     }
-    if(((size_t) realPP + 16) % 16 != 0){ //if not 16 byte aligned
-        printf("not 16 byte aligned\n");
+    if(((uintptr_t)pp & 0xF) != 0){ //if not 16 byte aligned
+        //printf("not 16 byte aligned\n");
         abort();
     }
     if(blockSize < 32){   //if blocksize < 32
-        printf("blck size less than 32\n");
+        //printf("blck size less than 32\n");
         abort();
     }
     if(blockSize % 16 != 0){ //if blocksize not multiple of 16
-        printf("not multiple of 16\n");
+        //printf("not multiple of 16\n");
         abort();
     }
     if((void *)realPP < ((void *)sf_mem_start() + 16)){ //header of block is before start of first block in heap 
-        printf("header is before memstart\n");
+        //printf("header is before memstart\n");
         abort();
     }
     if((void *)nextBlock->prev_footer > ((void *)sf_mem_end() - 16)){//footer of block is after the end of last block in heap
-        printf("footer is before memend\n");
+       // printf("footer is before memend\n");
         abort();
     }
     if(alloCheck == 0){ //if allocated bit of header is 0
-        printf("allocated bit is 0\n");
+        //printf("allocated bit is 0\n");
         abort();
     }
     if(prevAllo == 0 && prevBlockAllo == 1){ //if prev alloc is 0 but alloc of previous block is 1
-        printf("prev alloc is 0 and prev block allo is 1\n");
+        //printf("prev alloc is 0 and prev block allo is 1\n");
         abort();
     }
-
-    printf("made it past the invalid\n");
 
     //free the block
     realPP->header &= ~(1 << 3);
@@ -804,24 +802,10 @@ void sf_free(void *pp) {
     size_t sum = 0;
     size_t masker = 0x00000000FFFFFFFF;
     sf_block * ans = NULL;
-    
-     printf("This is the blockSize:");
-     printf("%zu\n", blockSize);
-     printf("This is the nextSize:");
-     printf("%zu\n", nextSize);
-     printf("This is the prevSize:");
-     printf("%zu\n", prevSize);
-
-     printf("This is the allocated bit of previous block:");
-     printf("%zu\n", prevBlockAllo);
-     printf("This is the allocated bit of next block:");
-     printf("%zu\n", nextBlockAllo);
-
-
 
     //coalesce depending on the 4 case scenarios
     if(prevBlockAllo == 1 && nextBlockAllo == 1){
-        printf("IM IN FIRST\n");
+     
         realPP->header &= ~(1 << 3); //set current block to be free
         realPP->header &= masker;
         if(prevBlockAllo == 1){
@@ -833,7 +817,7 @@ void sf_free(void *pp) {
         ans = realPP;
     }
     else if(prevBlockAllo == 1 && nextBlockAllo == 0){
-        printf("IM IN SECOND\n");
+    
         sum = blockSize + nextSize;
         realPP->header = (sum); //combination of next and curr blocksizes
         realPP->header &= ~(1 << 3); //set current block to be free
@@ -847,7 +831,7 @@ void sf_free(void *pp) {
     
     }
     else if(prevBlockAllo == 0 && nextBlockAllo == 1){
-        printf("IM IN THIRD\n");
+      
         sum = prevSize + blockSize;
         prevBlock->header = (sum); //update combo sum
         prevBlock->header &= ~(1 << 3); //set prev block to free
@@ -861,7 +845,7 @@ void sf_free(void *pp) {
         
     }
     else if(prevBlockAllo == 0 && nextBlockAllo == 0){
-        printf("IM IN LAST\n");
+      
         sum = prevSize + blockSize;
         sum += nextSize; //combo sum
         prevBlock->header = (sum);
@@ -882,10 +866,7 @@ void sf_free(void *pp) {
             continue;
         }
         sf_block* remover = checker->body.links.next; 
-        // size_t removeSize = remover->header;
-        // int mask4 = ((1 << (25)) - 1) << 4;
-        // removeSize = (removeSize & mask4);
-          
+      
         if(remover == prevBlock || remover == nextBlock){
             sf_block* prevRemove = remover->body.links.prev;
             sf_block* nextRemove = remover->body.links.next;
@@ -928,17 +909,105 @@ void sf_free(void *pp) {
 }
 
 void *sf_realloc(void *pp, size_t rsize) {
-    // To be implemented.
-    abort();
+    sf_block* realPP = ((sf_block*) pp);// le caster of of pp
+    
+    //this gets the blocksize
+    size_t blockSize = realPP->header;
+    int mask = ((1 << (25)) - 1) << 4;
+    blockSize = (blockSize & mask);
+
+    //this gets the allocated bit
+    size_t alloCheck = (realPP->header >> 3) & 1;
+    //this gets the PrevAlloc bit
+    size_t prevAllo= (realPP->header >> 2) & 1;
+    //get the allocated bit of the PREvious block
+    size_t prevBlockAllo= (realPP->prev_footer >> 3) & 1;
+
+    //to get to the next block after PP
+    sf_block* nextBlock = (sf_block*)((void*)pp + blockSize);
+
+    if(pp == NULL){  //CHECK FOR INVALID POINTER
+        //printf("null ptr\n");
+        abort(); 
+    }
+    if(((uintptr_t)pp & 0xF) != 0){ //if not 16 byte aligned
+        //printf("not 16 byte aligned\n");
+        abort();
+    }
+    if(blockSize < 32){   //if blocksize < 32
+        //printf("blck size less than 32\n");
+        abort();
+    }
+    if(blockSize % 16 != 0){ //if blocksize not multiple of 16
+        //printf("not multiple of 16\n");
+        abort();
+    }
+    if((void *)realPP < ((void *)sf_mem_start() + 16)){ //header of block is before start of first block in heap 
+        //printf("header is before memstart\n");
+        abort();
+    }
+    if((void *)nextBlock->prev_footer > ((void *)sf_mem_end() - 16)){//footer of block is after the end of last block in heap
+       // printf("footer is before memend\n");
+        abort();
+    }
+    if(alloCheck == 0){ //if allocated bit of header is 0
+        //printf("allocated bit is 0\n");
+        abort();
+    }
+    if(prevAllo == 0 && prevBlockAllo == 1){ //if prev alloc is 0 but alloc of previous block is 1
+        //printf("prev alloc is 0 and prev block allo is 1\n");
+        abort();
+    }
+
+    if(rsize == 0){
+        //free the block
+        sf_free(pp);
+        return NULL;
+    }
+
+    if(rsize == blockSize){
+        return pp;
+    }
+
+    if(rsize > blockSize){
+        void* newBlock = sf_malloc(rsize);
+
+        if(newBlock ==NULL){
+            return NULL;
+        }
+
+        memcpy(newBlock, realPP , rsize);
+
+        sf_free(pp);
+
+        return newBlock;
+
+
+    }
+
+    if(rsize < blockSize){
+        if((blockSize - rsize) < 32){
+            return pp;
+        }
+    }
+    
+    return NULL;
 }
 
 double sf_fragmentation() {
-    // To be implemented.
+    if(sf_mem_start() == sf_mem_end()){
+        return 0.0;
+    }
+
+   // double ans = 0;
+   // sf block* 
     abort();
 }
 
 double sf_utilization() {
-    // To be implemented.
+    if(sf_mem_start() == sf_mem_end()){
+        return 0.0;
+    }   
     abort();
 }
 
@@ -960,6 +1029,6 @@ size_t fib(int n) {
         b = sum;
 
     }
-    
+
     return b;
 }
