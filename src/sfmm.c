@@ -988,6 +988,10 @@ void *sf_realloc(void *pp, size_t rsize) {
         return pp;
     }
 
+    size_t payload = realPP->header;
+    payload &= 0xFFFFFFFF00000000;
+    
+
     if(rsize > blockSize){
         void* newBlock = sf_malloc(rsize);
 
@@ -995,7 +999,7 @@ void *sf_realloc(void *pp, size_t rsize) {
             return NULL;
         }
 
-        memcpy(newBlock, realPP , rsize);
+        memcpy(newBlock,(sf_block* ) (void*)realPP + 16 , payload);
 
         sf_free(realPP->body.payload);
 
