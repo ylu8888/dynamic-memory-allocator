@@ -10,6 +10,7 @@
 #include <errno.h>
 
 size_t fib(int n);
+sf_block *findBlock(void *pp);
 
 void *sf_malloc(size_t size) {
     if (size <= 0) {
@@ -18,7 +19,7 @@ void *sf_malloc(size_t size) {
     
     size_t ogSize = size; //keep track of original size for payload later UNCOMMENT THIS LATER
     ogSize <<= 32;
-    sf_block* ans;
+    void* ans;
     //le payload lol
     //left shift 32
     //put it onto each allocated block
@@ -276,7 +277,7 @@ void *sf_malloc(size_t size) {
                     nextJump->prev_footer |= (1 << 2);
                 }
 
-                ans = removedBlock;
+                ans = removedBlock->body.payload;
                             
                 
                 
@@ -326,7 +327,7 @@ void *sf_malloc(size_t size) {
 
                 endBlock->prev_footer |= (1 << 2);
 
-                ans = removedBlock;
+                ans = removedBlock->body.payload;
 
                 size_t epiCheck = endBlock->header;
 
@@ -463,7 +464,7 @@ void *sf_malloc(size_t size) {
                         nextJump->prev_footer |= (1 << 2);
                     }
 
-                    ans = newBlob;
+                    ans = newBlob->body.payload;
 
                    // sf_show_heap();
     
@@ -499,7 +500,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
 
-                    ans = newBlob;
+                    ans = newBlob->body.payload;
     
                    //sf_show_heap();  
                 }//end of splitting block
@@ -547,7 +548,7 @@ void *sf_malloc(size_t size) {
                         nextJump->prev_footer |= (1 << 2);
                     }
 
-                    ans = wildBlock;
+                    ans = wildBlock->body.payload;
 
                    // sf_show_heap();
     
@@ -583,7 +584,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
 
-                    ans = wildBlock;
+                    ans = wildBlock->body.payload;
     
                    //sf_show_heap();  
                 }//end of splitting block
@@ -669,7 +670,7 @@ void *sf_malloc(size_t size) {
                         sf_block* nextJump = (sf_block *)((void*)splinterCell + splinterSize);
                         nextJump->prev_footer |= (1 << 2);
                     }
-                    ans = wildBlock;
+                    ans = wildBlock->body.payload;
                   // sf_show_heap();
     
               
@@ -704,7 +705,7 @@ void *sf_malloc(size_t size) {
                     nextBlock->body.links.next = wildSentinel;
                     nextBlock->body.links.prev = wildSentinel;
 
-                    ans = wildBlock;
+                    ans = wildBlock->body.payload;
     
                    // sf_show_heap();  
                 }//end of splitting block
@@ -726,7 +727,9 @@ void *sf_malloc(size_t size) {
 }
 
 void sf_free(void *pp) {
-    sf_block* realPP = ((sf_block*) pp);// le caster of of pp
+   // sf_block* realPP = ((sf_block*) pp);// le caster of of pp
+
+    sf_block* realPP = findBlock(pp);
     
     //this gets the blocksize
     size_t blockSize = realPP->header;
@@ -741,7 +744,7 @@ void sf_free(void *pp) {
     size_t prevBlockAllo= (realPP->prev_footer >> 3) & 1;
 
     //to get to the next block after PP
-    sf_block* nextBlock = (sf_block*)((void*)pp + blockSize);
+    sf_block* nextBlock = (sf_block*)((void*)realPP + blockSize);
 
     if(pp == NULL){  //CHECK FOR INVALID POINTER
         //printf("null ptr\n");
@@ -784,10 +787,10 @@ void sf_free(void *pp) {
     int mask2 = ((1 << (25)) - 1) << 4;
     prevSize = (prevSize & mask2);
     //get the previous block
-    sf_block* prevBlock = (sf_block*)((void*)pp - prevSize); 
+    sf_block* prevBlock = (sf_block*)((void*)realPP - prevSize); 
     
 
-    size_t prevBlockPrevAllo= (prevBlock->header >> 2) & 1;
+    size_t prevBlockPrevAllo = (prevBlock->header >> 2) & 1;
 
     
     //get the blocksize of the next block
@@ -806,17 +809,17 @@ void sf_free(void *pp) {
     size_t masker = 0x00000000FFFFFFFF;
     sf_block * ans = NULL;
 
-        printf("This is the blockSize:");
-     printf("%zu\n", blockSize);
-     printf("This is the nextSize:");
-     printf("%zu\n", nextSize);
-     printf("This is the prevSize:");
-     printf("%zu\n", prevSize);
+    // printf("This is the blockSize:");
+    //  printf("%zu\n", blockSize);
+    //  printf("This is the nextSize:");
+    //  printf("%zu\n", nextSize);
+    //  printf("This is the prevSize:");
+    //  printf("%zu\n", prevSize);
 
-     printf("This is the allocated bit of previous block:");
-     printf("%zu\n", prevBlockAllo);
-     printf("This is the allocated bit of next block:");
-     printf("%zu\n", nextBlockAllo);
+    //  printf("This is the allocated bit of previous block:");
+    //  printf("%zu\n", prevBlockAllo);
+    //  printf("This is the allocated bit of next block:");
+    //  printf("%zu\n", nextBlockAllo);
 
     //coalesce depending on the 4 case scenarios
     if(prevBlockAllo == 1 && nextBlockAllo == 1){
@@ -925,7 +928,7 @@ void sf_free(void *pp) {
 }
 
 void *sf_realloc(void *pp, size_t rsize) {
-    sf_block* realPP = ((sf_block*) pp);// le caster of of pp
+   sf_block* realPP = findBlock(pp);
     
     //this gets the blocksize
     size_t blockSize = realPP->header;
@@ -940,7 +943,7 @@ void *sf_realloc(void *pp, size_t rsize) {
     size_t prevBlockAllo= (realPP->prev_footer >> 3) & 1;
 
     //to get to the next block after PP
-    sf_block* nextBlock = (sf_block*)((void*)pp + blockSize);
+    sf_block* nextBlock = (sf_block*)((void*)realPP + blockSize);
 
     if(pp == NULL){  //CHECK FOR INVALID POINTER
         //printf("null ptr\n");
@@ -994,7 +997,7 @@ void *sf_realloc(void *pp, size_t rsize) {
 
         memcpy(newBlock, realPP , rsize);
 
-        sf_free(pp);
+        sf_free(realPP->body.payload);
 
         return newBlock;
 
@@ -1047,4 +1050,24 @@ size_t fib(int n) {
     }
 
     return b;
+}
+
+sf_block * findBlock (void *ptr){
+    sf_block *begin = sf_mem_start();
+
+    sf_block *next = (sf_block *)((void* )begin + (begin->header & 0x00000000FFFFFFF0));
+
+    while(next <= (sf_block *)sf_mem_end() - 16){
+        if(ptr == next->body.payload){
+            return next;
+
+        }
+
+        next = (sf_block *)((void *)next + (next->header & 0x00000000FFFFFFF0));
+
+    }
+
+
+    return NULL;
+
 }
