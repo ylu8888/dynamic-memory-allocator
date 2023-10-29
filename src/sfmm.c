@@ -170,14 +170,14 @@ void *sf_malloc(size_t size) {
     size_t M = 32;
     int listPtr = 0;
     
-     for (int i = 0; i < NUM_FREE_LISTS - 2; i++) {
-    if (size <= (i == 0 ? M : M * fib(i + 2))) {
+    for (int i = 0; i < NUM_FREE_LISTS - 2; i++) {
+        if (size <= (i == 0 ? M : M * fib(i + 2))) {
         listPtr = i;
         break;
-    }
+        }
     }
 
-    if (size > (fib(NUM_FREE_LISTS - 2) * M)) {
+    if (size > (fib(NUM_FREE_LISTS - 1) * M)) {
         listPtr = NUM_FREE_LISTS - 2; // Set to the index before the wilderness
     }
 
@@ -349,16 +349,16 @@ void *sf_malloc(size_t size) {
                 else{  //put it into the sentinels array respectively
                     size_t newSize = blockSize - size; //48 - 32 = 16
                      
-                     for (int i = 0; i < NUM_FREE_LISTS - 2; i++) {
+                    for (int i = 0; i < NUM_FREE_LISTS - 2; i++) {
                         if (newSize <= (i == 0 ? M : M * fib(i + 2))) {
                             listPtr = i;
                             break;
+                            }
                         }
-                    }
 
-                    if (newSize > (fib(NUM_FREE_LISTS - 2) * M)) {
-                        listPtr = NUM_FREE_LISTS - 2; // Set to the index before the wilderness
-                    }
+                        if (newSize > (fib(NUM_FREE_LISTS - 1) * M)) {
+                            listPtr = NUM_FREE_LISTS - 2; // Set to the index before the wilderness
+                        }
 
                     //after finding the size class, iterate through that link list and add the newblock
                     //if cant find it any of the doubly link list then we put it into wilderness
@@ -943,16 +943,23 @@ double sf_utilization() {
 }
 
 size_t fib(int n) {
-    if (n <= 0) return 0;
-    if (n == 1) return 1;
+    if (n <= 0){
+        return 0;
+    }
+    if (n == 1){
+        return 1;
+    }
 
     size_t a = 0;
     size_t b = 1;
-    size_t temp = 0;
+    size_t sum = 0;
+
     for (int i = 2; i <= n; i++) {
-        temp = a + b;
+        sum = a + b;
         a = b;
-        b = temp;
+        b = sum;
+
     }
+    
     return b;
 }
