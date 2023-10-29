@@ -980,28 +980,30 @@ void *sf_realloc(void *pp, size_t rsize) {
 
     if(rsize == 0){
         //free the block
-        sf_free(pp);
+        sf_free(realPP);
         return NULL;
     }
 
     if(rsize == blockSize){
-        return pp;
+        return realPP;
     }
 
     size_t payload = realPP->header;
     payload &= 0xFFFFFFFF00000000;
-    
+    payload >>= 32;
 
     if(rsize > blockSize){
-        void* newBlock = sf_malloc(rsize);
-
-        if(newBlock ==NULL){
+        sf_block *newBlock = sf_malloc(rsize);
+        if(newBlock == NULL){
             return NULL;
         }
 
-        memcpy(newBlock,(sf_block* ) (void*)realPP + 16 , payload);
+        memcpy(newBlock,(sf_block* )((void*)realPP + 16 ), payload);
 
         sf_free(realPP->body.payload);
+
+        printf("iduwauhda\n");
+        printf("%ld\n", newBlock->header);
 
         return newBlock;
 
