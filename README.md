@@ -1,6 +1,6 @@
 # dynamic-memory-allocator
 
-## Created an allocator for the x86-64 architecture with the following features:
+**Created an allocator for the x86-64 architecture with the following features:**
 
 * Free lists segregated by size class, using first-fit policy within each size class.
   
@@ -18,7 +18,7 @@
   
 * "Wilderness preservation" heuristic, to avoid unnecessary growing of the heap.
 
-## After completing this project, I now have a better understanding of:
+**After completing this project, I now have a better understanding of:**
 
 * The inner workings of a dynamic memory allocator
   
