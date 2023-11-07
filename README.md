@@ -1,6 +1,6 @@
 # dynamic-memory-allocator
 
-##Created an allocator for the x86-64 architecture with the following features:
+## Created an allocator for the x86-64 architecture with the following features:
 
 * Free lists segregated by size class, using first-fit policy within each size class.
   
