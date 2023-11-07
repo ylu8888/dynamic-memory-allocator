@@ -18,7 +18,7 @@
   
 * "Wilderness preservation" heuristic, to avoid unnecessary growing of the heap.
 
-After completing this project, I now have a better understanding of:
+## After completing this project, I now have a better understanding of:
 
 * The inner workings of a dynamic memory allocator
   
